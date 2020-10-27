@@ -1,0 +1,14 @@
+{
+  "name": "iotplatform",
+  "version": "1.0.0",
+  "description": "Iot plaform for device management",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Aditya Chaudhary",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}
