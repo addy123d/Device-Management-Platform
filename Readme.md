@@ -10,12 +10,19 @@
 
 ### TODO  (28-10-2020)
 
-*[] REGISTRATION & LOGIN (Arrays)
-    *[] What is GET & POST ?
-    *[] Why Arrays and (why not database now?) and what are objects 🤔?
-    *[] User Registration🧑👩
-    *[] Discuss elements to be stored during user registration📃
-    *[] How we will generate unique ID for every user 🥱?
-    *[] What will be the use of apiKey or token ID 🤔?
+*[x] REGISTRATION & LOGIN (Arrays)
+    *[x] What is GET & POST ?
+    *[x] Why Arrays and (why not database now?) and what are objects 🤔?
+    *[x] User Registration🧑👩
+    *[x] Discuss elements to be stored during user registration📃
+    *[x] How we will generate unique ID for every user 🥱?
+    *[x] What will be the use of apiKey or token ID 🤔?
 
+### TODO  (30-10-2020)
+
+*[] Store Cookie
+    *[] What are cookies🍪 ?
+    *[] Why session is necessary🤔 ?
+    *[] Dependency Installation for cookie🍪 storage !
+    *[] Apply cookie storage while logging in and registration
 
