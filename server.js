@@ -1,5 +1,7 @@
 // Include dependency (Express)
 const express = require("express");
+const session = require("express-session");
+const ejs = require("ejs");
 const host = "127.0.0.1";
 const port = 5000;
 
@@ -10,6 +12,46 @@ var app = express();
 app.use(express.json());
 app.use(express.urlencoded({extended : false}));
 
+//Configuration
+ // SESSION CONFIGURATION (for initialising of token, and many more properties !)
+ const sess = {
+    name: "User",
+    resave: false,
+    saveUninitialized: true,
+    secret: "mySecret",
+    cookie: {}
+  }
+
+
+  if (app.get('env') === "production") {
+    sess.cookie.secure = false;
+    sess.cookie.maxAge = 60 * 60;
+    sess.cookie.sameSite = true;
+}
+
+
+app.use(session(sess));
+
+app.set("view engine","ejs");
+
+//Functions
+function redirectProfile(request,response,next){
+    console.log(request.session.Email);
+    if(request.session.Email){
+        response.redirect("/profile");
+    }else{
+        next();
+    }
+};
+
+function redirectLogin(request,response,next){
+    if(!request.session.Email){
+        response.redirect("/login");
+    }else{
+        next();
+    }
+}
+
 //Create array for storing users names users
 const users = [];
 
@@ -18,12 +60,8 @@ const users = [];
 app.use("/",express.static("client"));
 
 // Registration
-app.get("/register",function(request,response){
-    response.send(`<form action="/registerDetails" method="POST">
-                    <input type="email" name="email" placeholder="Email📧" autocomplete="off">
-                    <input type="password" name="password" placeholder="Choose Password" autocomplete="off">
-                    <button>Submit</button>
-                 `);
+app.get("/register",redirectProfile,function(request,response){
+    response.render("register");
 })
 
 //Collect Registration Details
@@ -86,7 +124,11 @@ app.post("/registerDetails",function(request,response){
              usage :[{
                  date : today,
                  count : 0
-             }]
+             }],
+             projectTitle : [],
+             ips : [],
+             pinNumber : [],
+             projectDescription : []
          }
 
         //  Push user object into users array !
@@ -94,7 +136,16 @@ app.post("/registerDetails",function(request,response){
         console.log(users);
 
         //  Send Registration successful message✅ !
-        response.send("registration successful !🎉");
+        // response.send("registration successful !🎉");
+
+        //Store data into cookie🍪
+        
+        request.session.Email = email;
+        request.session.Password = password;
+
+        console.log(request.session);
+
+        response.redirect("/addnewproject");
 
      }else{
         
@@ -105,12 +156,8 @@ app.post("/registerDetails",function(request,response){
 });
 
 // Login
-app.get("/login",function(request,response){
-    response.send(`<form action="/loginDetails" method="POST">
-                    <input type="email" name="email" placeholder="Email📧" autocomplete="off">
-                    <input type="password" name="password" placeholder="Choose Password" autocomplete="off">
-                    <button>Submit</button>
-                 `);
+app.get("/login",redirectProfile,function(request,response){
+    response.render("login");
 });
 
 app.post("/loginDetails",function(request,response){
@@ -134,15 +181,61 @@ app.post("/loginDetails",function(request,response){
         //User exists !
         //Password matching
         if(users[getIndex].password === password){
-            response.send("Success : Logged In !🎉");
+            // response.send("Success : Logged In !🎉");
+
+         //Store data into cookie🍪
+        request.session.Email = users[getIndex].email;
+        request.session.Password = users[getIndex].password;
+
+        console.log(request.session);
+
+        response.redirect("/addnewproject");
         }else{
             response.send("Error :Password Incorrect !❌");
         }
     }
 
+});
+
+app.get("/addnewproject",redirectLogin,function(request,response){
+    response.render("newproject");
+});
+
+app.post("/projectDetails",function(request,response){
+    const title = request.body.title;
+    const ip = request.body.ip;
+    const pinNumber = request.body.pinNumber;
+    const description = request.body.projDescription; 
+    const email = request.session.Email;
+
+    //Steps to push details
+    //Find location of user in array
+    const getIndex = users.findIndex((user)=>user.email === email);
+
+    console.log("Index :",getIndex);
+
+    //Push details
+    users[getIndex].projectTitle.push(title);
+    users[getIndex].ips.push(ip);
+    users[getIndex].pinNumber.push(pinNumber);
+    users[getIndex].projectDescription.push(description);
+
+    console.log("Titles :",users[getIndex].projectTitle);
+    console.log("IPs :",users[getIndex].ips);
+    console.log("Pin Number :",users[getIndex].pinNumber);
+    console.log("description :",users[getIndex].projectDescription);
+
 })
 
+app.get("/logout",function(request,response){
+    request.session.destroy(function(err){
+        if(err){
+            response.redirect("/profile");
+        }
 
+        response.redirect("/login");
+    })
+})
 
 app.listen(port,host,function(){
     console.log("Server is running !");

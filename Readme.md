@@ -20,9 +20,9 @@
 
 ### TODO  (30-10-2020)
 
-*[] Store Cookie
-    *[] What are cookies🍪 ?
-    *[] Why session is necessary🤔 ?
-    *[] Dependency Installation for cookie🍪 storage !
-    *[] Apply cookie storage while logging in and registration
+*[x] Store Cookie
+    *[x] What are cookies🍪 ?
+    *[x] Why session is necessary🤔 ?
+    *[x] Dependency Installation for cookie🍪 storage !
+    *[x] Apply cookie storage while logging in and registration
 
