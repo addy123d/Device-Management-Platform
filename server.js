@@ -225,6 +225,11 @@ app.post("/projectDetails",function(request,response){
     console.log("Pin Number :",users[getIndex].pinNumber);
     console.log("description :",users[getIndex].projectDescription);
 
+    // response.send("Data stored successfully !");
+    response.json({
+        "message" : "Data stored successfully !"
+    });
+
 })
 
 app.get("/logout",function(request,response){
