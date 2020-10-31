@@ -8,13 +8,149 @@
 </head>
 
 <body>
-    <form action="/projectDetails" method="POST">
-        <input type="text" name="title" placeholder="Project Title" autocomplete="off">
-        <input type="text" name="ip" placeholder="Enter Ip" autocomplete="off">
-        <input type="number" name="pinNumber" placeholder="Pins for device configuration" autocomplete="off">
-        <textarea name="projDescription" placeholder="Project Description"></textarea>
-        <button>Submit</button>
-    </form>
+    <!-- <form action="/projectDetails" method="POST"> -->
+    <input type="text" name="title" id="title" placeholder="Project Title" autocomplete="off">
+    <input type="text" name="ip" id="ip" placeholder="Enter Ip" autocomplete="off">
+    <input type="number" name="pinNumber" id="number" placeholder="Pins for device configuration" autocomplete="off">
+    <textarea name="projDescription" id="description" placeholder="Project Description"></textarea>
+    <button id="button">Generate</button>
+    <!-- </form> -->
+
+    <textarea id="code">
+
+    </textarea>
+
+    <!-- Response -->
+    <div class="response" style="display: none;">
+        <h2>Project Registered !</h2>
+    </div>
 </body>
+<script>
+    const title = document.querySelector("#title");
+    const ip = document.querySelector("#ip");
+    const number = document.querySelector("#number");
+    const description = document.querySelector("#description");
+    const button = document.querySelector("#button");
+    const generatedCode = document.querySelector("#code");
+    const response = document.querySelector(".response");
+
+    //Click button
+    button.addEventListener("click", function (event) {
+        event.preventDefault();
+
+        //Collect Values
+        console.log("Title :", title.value);
+        console.log("Ip :", ip.value);
+        console.log("Number :", number.value);
+        console.log("Description :", description.value);
+
+        //LowerCasing
+        let titleValue = title.value;
+        titleValue = titleValue.toLowerCase();
+
+
+        if (titleValue.includes("motor")) {
+            code.value = `  const {Board, Servo} = require("johnny-five");
+                            const board = new Board();
+
+                            board.on("ready", () => {
+                            const servo = new Servo(${number.value});
+
+                            // Server Configuration
+                            const express = require("express");
+                            const host = ${ip.value};
+                            const port = 3000;
+
+                            const app = express();
+
+                            app.get("/",function(request,response){
+                                response.send("< a href = "/on" > Motor On</a > ")
+                            })
+
+                            app.get("/on",function(request,response){
+                                //Blink
+                                servo.sweep();
+                                response.send("Motor is working !");
+                            });
+
+                            app.listen(port,host,function(){
+                                console.log("Server is running...");
+                            })
+
+
+                            });`;
+        }
+
+        if (titleValue.includes("led") | titleValue.includes("blink")) {
+            code.value = `const { Board, Led } = require("johnny-five");
+                            const board = new Board();
+
+                            board.on("ready", function() {
+                            //Pin configuration
+                            var led = new Led(${number.value});
+
+                            // Server Configuration
+                            const express = require("express");
+                            const host = ${ip.value};
+                            const port = 3000;
+
+                            const app = express();
+
+                            app.get("/",function(request,response){
+                                response.send("< a href = "/on" > Led On</a > ")
+                            })
+
+                            app.get("/on",function(request,response){
+                                //Blink
+                                led.blink(1500);
+                                response.send("LED is blinking !");
+                            });
+
+                            app.listen(port,host,function(){
+                                console.log("Server is running...");
+                            })
+
+
+                            });`;
+        }
+
+        // if (titleValue.includes("sensor")) {
+        //     console.log("Sensor code...Now not available !");
+        //     code.value = "Sensor code...Now not available !";
+        // }
+
+        const options = {
+            method: "POST",
+            body: JSON.stringify({
+                title: title.value,
+                ip: ip.value,
+                pinNumber: number.value,
+                projDescription: description.value
+            }),
+            headers: new Headers({ 'Content-Type': 'application/json' })
+        };
+
+        fetch("/projectDetails", options)
+            .then(response => response.json())
+            .then(function (data) {
+                console.log("Data sent successfully !");
+                if (data) {
+                    response.style.display = "block";
+                }
+            })
+            .catch(function (err) {
+                console.log(err);
+                return err;
+            }
+            );
+
+        //Reset all values
+        title.value = "";
+        ip.value = "";
+        number.value = "";
+        description.value = "";
+
+    })
+</script>
 
 </html>
