@@ -4,6 +4,7 @@ const session = require("express-session");
 const ejs = require("ejs");
 const host = "127.0.0.1";
 const port = 5000;
+var hour = 3600000;
 
 // Initialisation
 var app = express();
@@ -23,11 +24,12 @@ app.use(express.urlencoded({extended : false}));
   }
 
 
-  if (app.get('env') === "production") {
-    sess.cookie.secure = false;
-    sess.cookie.maxAge = 60 * 60;
+//   if (app.get('env') === "production") {
+    sess.cookie.secure = false; //http or https
+    sess.cookie.expires = new Date(Date.now() + hour)
+    sess.cookie.maxAge = hour;
     sess.cookie.sameSite = true;
-}
+// }
 
 
 app.use(session(sess));
@@ -37,18 +39,70 @@ app.set("view engine","ejs");
 //Functions
 function redirectProfile(request,response,next){
     console.log(request.session.Email);
+
     if(request.session.Email){
-        response.redirect("/profile");
+        response.redirect("/addnewproject");
     }else{
         next();
     }
+
 };
 
 function redirectLogin(request,response,next){
+
     if(!request.session.Email){
         response.redirect("/login");
     }else{
         next();
+    };
+
+}
+
+function validateKey(request,response,next){
+
+    const email = request.params.email;
+    const key = request.params.key;
+
+    //Check if account exists or not
+    const account = users.find((user)=> user.email === email && user.api_key === key);
+
+    //object or undefined
+    if(account){
+        let today = new Date().toLocaleString().split(",")[0];
+
+        //Usage day exists or not !
+        const usageIndex = account.usage.findIndex(user=>user.date === today);
+
+        if(usageIndex >=0){
+
+            if(account.usage[usageIndex].count > 20){
+                response.json({
+                    "err" : "Max calls exceeded !"
+                });
+            }else{
+                account.usage[usageIndex].count++;
+                console.log("Count :",account.usage[usageIndex].count);
+
+                next();
+            }
+
+        }else{
+
+            account.usage.push({
+                date : today,
+                count : 0
+            });
+
+            console.log("Account Usage :",account.usage);
+
+            next();
+        }
+    }else{
+
+        response.json({
+            "error" : "You are not allowed !"
+        });
+
     }
 }
 
@@ -62,7 +116,8 @@ app.use("/",express.static("client"));
 // Registration
 app.get("/register",redirectProfile,function(request,response){
     response.render("register");
-})
+});
+
 
 //Collect Registration Details
 app.post("/registerDetails",function(request,response){
@@ -139,7 +194,6 @@ app.post("/registerDetails",function(request,response){
         // response.send("registration successful !🎉");
 
         //Store data into cookie🍪
-        
         request.session.Email = email;
         request.session.Password = password;
 
@@ -230,7 +284,33 @@ app.post("/projectDetails",function(request,response){
         "message" : "Data stored successfully !"
     });
 
-})
+});
+
+
+//For testing and nothing for use !
+const dummy_data = [{
+    date : new Date().toLocaleString().split(",")[0],
+    reading : 2.5
+},{
+    date : new Date().toLocaleString().split(",")[0],
+    reading : 3
+},{
+    date : new Date().toLocaleString().split(",")[0],
+    reading : 5
+}
+];
+
+app.get("/projectdata/:key&:email",redirectLogin,validateKey,function(request,response){
+    response.json({
+        "data" : dummy_data
+    });
+});
+
+
+app.get("/deviceping/:key&:email",validateKey,function(request,response){
+    console.log("Device is connected with me !");
+    response.send("Device successfully Connected !");
+});
 
 app.get("/logout",function(request,response){
     request.session.destroy(function(err){
