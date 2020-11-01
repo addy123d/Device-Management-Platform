@@ -58,18 +58,29 @@
 
                             // Server Configuration
                             const express = require("express");
+                            const fetch = require("node-fetch");
                             const host = ${ip.value};
                             const port = 3000;
 
                             const app = express();
 
                             app.get("/",function(request,response){
-                                response.send("< a href = "/on" > Motor On</a > ")
+                                response.send("<a href = "/on"> Motor On</a> ")
                             })
 
                             app.get("/on",function(request,response){
                                 //Blink
                                 servo.sweep();
+
+                                //Request platform server
+
+                                fetch("http://${ip.value}:5000/deviceping/<api_key>&<email>")
+                                .then(response=>response.json())
+                                .then((result)=>{
+                                    console.log(result);
+                                })
+                                .catch(err=>console.log(err));
+
                                 response.send("Motor is working !");
                             });
 
@@ -91,20 +102,30 @@
 
                             // Server Configuration
                             const express = require("express");
+                            const fetch = require("node-fetch");
                             const host = ${ip.value};
                             const port = 3000;
 
                             const app = express();
 
                             app.get("/",function(request,response){
-                                response.send("< a href = "/on" > Led On</a > ")
+                                response.send("<a href = "/on"> Led On</a> ")
                             })
 
                             app.get("/on",function(request,response){
                                 //Blink
                                 led.blink(1500);
+                                //Request platform server
+
+                                fetch("http://${ip.value}:5000/deviceping/<api_key>&<email>")
+                                .then(response=>response.json())
+                                .then((result)=>{
+                                    console.log(result);
+                                })
+                                .catch(err=>console.log(err));
+
                                 response.send("LED is blinking !");
-                            });
+                                });
 
                             app.listen(port,host,function(){
                                 console.log("Server is running...");
@@ -141,8 +162,7 @@
             .catch(function (err) {
                 console.log(err);
                 return err;
-            }
-            );
+            });
 
         //Reset all values
         title.value = "";
