@@ -59,7 +59,7 @@
                             // Server Configuration
                             const express = require("express");
                             const fetch = require("node-fetch");
-                            const host = ${ip.value};
+                            const host = "${ip.value}"";
                             const port = 3000;
 
                             const app = express();
@@ -74,7 +74,7 @@
 
                                 //Request platform server
 
-                                fetch("http://${ip.value}:5000/deviceping/<api_key>&<email>")
+                                fetch("http://127.0.0.1:5000/deviceping/<api_key>&<email>")
                                 .then(response=>response.json())
                                 .then((result)=>{
                                     console.log(result);
@@ -98,33 +98,36 @@
 
                             board.on("ready", function() {
                             //Pin configuration
-                            var led = new Led(${number.value});
+                            var led = new Led(13);
 
                             // Server Configuration
                             const express = require("express");
                             const fetch = require("node-fetch");
-                            const host = ${ip.value};
+                            const host = "${ip.value}";
                             const port = 3000;
 
                             const app = express();
 
                             app.get("/",function(request,response){
-                                response.send("<a href = "/on"> Led On</a> ")
+                                response.send("< a href = "/on" > Led On</a > "");
                             })
 
                             app.get("/on",function(request,response){
-                                //Blink
-                                led.blink(1500);
+                           
                                 //Request platform server
-
-                                fetch("http://${ip.value}:5000/deviceping/<api_key>&<email>")
+                                fetch("http://127.0.0.1:5000/deviceping/<api_key>&<email>")
                                 .then(response=>response.json())
                                 .then((result)=>{
                                     console.log(result);
+                                    //Blink
+                                    if(result.error === 'You are not allowed !' || result.error === "Max calls exceeded !"){
+                                        response.send(result.error);
+                                    }else{
+                                        led.blink(1500);
+                                        response.send("Connected !");
+                                    }
                                 })
                                 .catch(err=>console.log(err));
-
-                                response.send("LED is blinking !");
                                 });
 
                             app.listen(port,host,function(){

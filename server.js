@@ -77,12 +77,11 @@ function validateKey(request,response,next){
 
             if(account.usage[usageIndex].count > 20){
                 response.json({
-                    "err" : "Max calls exceeded !"
+                    "error" : "Max calls exceeded !"
                 });
             }else{
                 account.usage[usageIndex].count++;
                 console.log("Count :",account.usage[usageIndex].count);
-
                 next();
             }
 
@@ -199,7 +198,8 @@ app.post("/registerDetails",function(request,response){
 
         console.log(request.session);
 
-        response.redirect("/addnewproject");
+        response.send(`<h1>Registered ! Your key - ${user.api_key}</h1>
+                        <a href="/addnewproject"><button>New Project</button></a>`)
 
      }else{
         
@@ -309,7 +309,9 @@ app.get("/projectdata/:key&:email",redirectLogin,validateKey,function(request,re
 
 app.get("/deviceping/:key&:email",validateKey,function(request,response){
     console.log("Device is connected with me !");
-    response.send("Device successfully Connected !");
+    response.json({
+        "success" : "Connected !"
+    })
 });
 
 app.get("/logout",function(request,response){
