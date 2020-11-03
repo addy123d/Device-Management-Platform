@@ -199,7 +199,7 @@ app.post("/registerDetails",function(request,response){
         console.log(request.session);
 
         response.send(`<h1>Registered ! Your key - ${user.api_key}</h1>
-                        <a href="/addnewproject"><button>New Project</button></a>`)
+                        <a href="/addnewproject"><button>New Project</button></a>`);
 
      }else{
         
@@ -311,8 +311,18 @@ app.get("/deviceping/:key&:email",validateKey,function(request,response){
     console.log("Device is connected with me !");
     response.json({
         "success" : "Connected !"
-    })
+    });
 });
+
+
+//Collect User data !
+app.post("/device/data",function(request,response){
+    console.log(request.body);
+    response.json({
+        "success" : "Data collected successfully"
+    });
+});
+
 
 app.get("/logout",function(request,response){
     request.session.destroy(function(err){

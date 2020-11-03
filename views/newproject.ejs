@@ -98,7 +98,7 @@
 
                             board.on("ready", function() {
                             //Pin configuration
-                            var led = new Led(13);
+                            var led = new Led(${number.value});
 
                             // Server Configuration
                             const express = require("express");
@@ -109,7 +109,8 @@
                             const app = express();
 
                             app.get("/",function(request,response){
-                                response.send("< a href = "/on" > Led On</a > "");
+                                response.send("<a href = "/on" > Led On</a> 
+                                                <a href = "/off" > Led Off</a>");
                             })
 
                             app.get("/on",function(request,response){
@@ -121,10 +122,30 @@
                                     console.log(result);
                                     //Blink
                                     if(result.error === 'You are not allowed !' || result.error === "Max calls exceeded !"){
+                                        led.stop().off();
                                         response.send(result.error);
                                     }else{
-                                        led.blink(1500);
-                                        response.send("Connected !");
+                                        led.blink(1000);
+                                        response.send("Connected with platform server !");
+                                    }
+                                })
+                                .catch(err=>console.log(err));
+                                });
+                             
+                              app.get("/off",function(request,response){
+                           
+                                //Request platform server
+                                fetch("http://127.0.0.1:5000/deviceping/<api_key>&<email>")
+                                .then(response=>response.json())
+                                .then((result)=>{
+                                    console.log(result);
+                                    //Blink
+                                    if(result.error === 'You are not allowed !' || result.error === "Max calls exceeded !"){
+                                        led.stop().off();
+                                        response.send(result.error);
+                                    }else{
+                                        led.stop().off();
+                                        response.send("Connected with platform server!");
                                     }
                                 })
                                 .catch(err=>console.log(err));
