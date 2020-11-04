@@ -107,6 +107,7 @@ function validateKey(request,response,next){
 
 //Create array for storing users names users
 const users = [];
+const userData = [];
 
 // REQUEST - (Path - /)
 // RESPONSE - HTML page 
@@ -288,39 +289,86 @@ app.post("/projectDetails",function(request,response){
 
 
 //For testing and nothing for use !
-const dummy_data = [{
-    date : new Date().toLocaleString().split(",")[0],
-    reading : 2.5
-},{
-    date : new Date().toLocaleString().split(",")[0],
-    reading : 3
-},{
-    date : new Date().toLocaleString().split(",")[0],
-    reading : 5
-}
-];
+//Made just to check !
+// const dummy_data = [{
+//     date : new Date().toLocaleString().split(",")[0],
+//     reading : 2.5
+// },{
+//     date : new Date().toLocaleString().split(",")[0],
+//     reading : 3
+// },{
+//     date : new Date().toLocaleString().split(",")[0],
+//     reading : 5
+// }
+// ];
 
-app.get("/projectdata/:key&:email",redirectLogin,validateKey,function(request,response){
-    response.json({
-        "data" : dummy_data
-    });
-});
+// app.get("/projectdata/:key&:email",redirectLogin,validateKey,function(request,response){
+//     response.json({
+//         "data" : dummy_data
+//     });
+// });
 
 
 app.get("/deviceping/:key&:email",validateKey,function(request,response){
     console.log("Device is connected with me !");
-    response.json({
-        "success" : "Connected !"
-    });
+
+    const key = request.params.key;
+    console.log("Key :",key);
+    const getIndex = userData.findIndex((user)=>user.key === key);
+
+    if(getIndex < 0){
+         //Push 
+        const data_object = {
+            key : key,
+            data : []
+        };
+
+        userData.push(data_object);
+        console.log(userData);
+    };
+
+    console.log("Data Array :",userData);
+
+    response.status(200).json({
+        "success": "Connected Successfully !"
+    })
 });
 
 
 //Collect User data !
-app.post("/device/data",function(request,response){
+app.post("/device/data/:api_key",function(request,response){
     console.log(request.body);
+
+    //Collect properties
+    // const distance = request.body.distance;
+    // const reading = request.body.reading;
+    // const status = request.body.status;
+    // const time = request.body.time;
+
+    const { distance, reading, status, time} = request.body;
+    const key = request.params.api_key;
+
+    // Get index
+    const getIndex = userData.findIndex((user)=> user.key === key);
+
+    const device_data = {
+        distance : distance,
+        reading : reading,
+        status : status,
+        time : time
+    };
+
+    userData[getIndex].data.push(device_data);
+
+    console.log("Data :",userData[getIndex].data);
+
     response.json({
-        "success" : "Data collected successfully"
+        "success" : "Data collected successfully !"
     });
+});
+
+app.get("/graph",function(request,response){
+    response.render("graph");
 });
 
 
@@ -337,3 +385,13 @@ app.get("/logout",function(request,response){
 app.listen(port,host,function(){
     console.log("Server is running !");
 });
+
+
+// const userData = [{
+//     key : key,
+//     data : [{},{},{}]
+// },{
+
+// },{
+
+// }]
