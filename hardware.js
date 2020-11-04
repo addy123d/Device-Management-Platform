@@ -28,23 +28,21 @@ board.on("ready", () => {
   app.get("/on",function(request,response){
 
       //Request platform server
-      fetch("http://127.0.0.1:5000/deviceping/af179c70ef276&ac@gmail.com")
+      fetch("http://127.0.0.1:5000/deviceping/d509efc7b006b&ac@gmail.com")
       .then(response=>response.json())
       .then((result)=>{
           console.log(result);
           //Blink
           if(result.error === 'You are not allowed !' || result.error === "Max calls exceeded !"){
-              response.send(result.error);
-          }else{
-              
-            response.send("Data Sending... !");
+              return response.send(result.error);
+          };
+
               //Alright
               proximity.on("change", () => {
                 const {centimeters} = proximity;
                 console.log("  cm  : ", centimeters);
             
                 if(centimeters < 5){
-            
                     led.on();
             
                     const data = {
@@ -64,7 +62,7 @@ board.on("ready", () => {
                         headers : {'Content-Type':'application/json'}
                     };
 
-                    fetch('http://127.0.0.1:5000/device/data',options)
+                    fetch('http://127.0.0.1:5000/device/data/d509efc7b006b',options)
                     .then(res=>res.json())
                     .then((json)=>{
                         console.log("Message from server :",json);
@@ -77,7 +75,8 @@ board.on("ready", () => {
                 }
         
               });
-            }
+
+              return response.json({"message" : "Data sending ...."});
         }).
         catch(function(err){
             console.log(err);
