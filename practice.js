@@ -32,5 +32,5 @@
 // console.log("API STR :",apiString.split(".")[1]);
 
 //Generate Time
-const time = new Date().toLocaleString().split(",")[0];
+const time = new Date().toString();
 console.log(time);
