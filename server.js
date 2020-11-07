@@ -241,6 +241,7 @@ app.post("/loginDetails",function(request,response){
          //Store data into cookie🍪
         request.session.Email = users[getIndex].email;
         request.session.Password = users[getIndex].password;
+        request.session.key = users[getIndex].api_key;
 
         console.log(request.session);
 
@@ -309,10 +310,12 @@ app.post("/projectDetails",function(request,response){
 // });
 
 
-app.get("/deviceping/:key&:email",validateKey,function(request,response){
+app.get("/deviceping/:key&:email&:title",validateKey,function(request,response){
     console.log("Device is connected with me !");
 
     const key = request.params.key;
+    const title = request.params.title;
+
     console.log("Key :",key);
     const getIndex = userData.findIndex((user)=>user.key === key);
 
@@ -320,10 +323,24 @@ app.get("/deviceping/:key&:email",validateKey,function(request,response){
          //Push 
         const data_object = {
             key : key,
-            data : []
+            projectName : [title],
+            data :[{
+                deviceData : []
+            }]
         };
 
         userData.push(data_object);
+        console.log(userData);
+    }else{
+
+        //Check project name repetition
+        const titleIndex = userData[getIndex].projectName.findIndex((projectTitle)=> projectTitle === title);
+        
+        if(titleIndex < 0){
+            userData[getIndex].projectName.push(title);
+            userData[getIndex].data.push({deviceData : []});
+        };
+
         console.log(userData);
     };
 
@@ -331,44 +348,102 @@ app.get("/deviceping/:key&:email",validateKey,function(request,response){
 
     response.status(200).json({
         "success": "Connected Successfully !"
-    })
+    });
 });
 
 
 //Collect User data !
-app.post("/device/data/:api_key",function(request,response){
-    console.log(request.body);
+app.post("/device/data/:api_key&:title",function(request,response){
+    // console.log(request.body);
 
-    //Collect properties
+    //Collect properties (Normal way)
     // const distance = request.body.distance;
     // const reading = request.body.reading;
     // const status = request.body.status;
     // const time = request.body.time;
 
+    // Alternative way to collect properties
     const { distance, reading, status, time} = request.body;
     const key = request.params.api_key;
+    const projectTitle = request.params.title;
 
-    // Get index
+    // Get index && we are checking if user sends data or not !
     const getIndex = userData.findIndex((user)=> user.key === key);
+    
+    //Check project title location for appropriate storage of data corresponding to its title
+    const titleIndex = userData[getIndex].projectName.findIndex((projTitle)=> projTitle === projectTitle);
 
-    const device_data = {
-        distance : distance,
-        reading : reading,
-        status : status,
-        time : time
-    };
+        const device_data = {
+            distance : distance,
+            reading : reading,
+            status : status,
+            time : time
+        };
 
-    userData[getIndex].data.push(device_data);
+        userData[getIndex].data[titleIndex].deviceData.push(device_data);
 
-    console.log("Data :",userData[getIndex].data);
+        console.log(userData[getIndex].data[titleIndex].deviceData);
+        
+
+
+    // const device_data = {
+    //     distance : distance,
+    //     reading : reading,
+    //     status : status,
+    //     time : time
+    // };
+
+    // userData[getIndex].data.push(device_data);
+
+    // console.log("Data :",userData[getIndex].data);
+    // console.log("Data Array :",userData);
 
     response.json({
         "success" : "Data collected successfully !"
     });
 });
 
-app.get("/graph",function(request,response){
-    response.render("graph");
+app.get("/graph/:title",redirectLogin,function(request,response){
+    const key = request.session.key;
+    const title = request.params.title;
+
+    //Check if account exists or not
+    const user_accountIndex = userData.findIndex((user)=>user.key === key);
+
+    if(user_accountIndex >= 0){ 
+
+        const titleIndex = userData[user_accountIndex].projectName.findIndex((projectTitle)=> projectTitle === title);
+
+        if(titleIndex >= 0){
+           const dataArray =  userData[user_accountIndex].data[titleIndex].deviceData;
+
+        let reading = [];
+        let date = [];
+
+        dataArray.forEach(data => {
+            //Seperate reading and store in reading array
+            reading.push(data.reading);
+
+            //Seperate time and store in date array
+            date.push(data.time);
+        });
+
+        console.log("Readings Array :",reading);
+        console.log("Date Array :",date);
+        
+        response.render("graph",{
+            readings : reading,
+            date : date
+        });
+
+        }else{
+            response.send(`Given project doesn't exists.. Create one <a href="/addnewproject">Create New Project</a>`);
+        }
+    }else{
+        response.send("No data yet !");
+    }
+
+
 });
 
 
@@ -376,22 +451,12 @@ app.get("/logout",function(request,response){
     request.session.destroy(function(err){
         if(err){
             response.redirect("/profile");
-        }
+        };
 
         response.redirect("/login");
     })
-})
+});
 
 app.listen(port,host,function(){
     console.log("Server is running !");
 });
-
-
-// const userData = [{
-//     key : key,
-//     data : [{},{},{}]
-// },{
-
-// },{
-
-// }]

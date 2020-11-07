@@ -8,18 +8,32 @@
 </head>
 
 <body>
-    <canvas id="myChart" width="400" height="400"></canvas>
+    <canvas id="myChart" style="display: block; height: 100px; width: 1127px;" width="1408" height="450"></canvas>
 </body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
 <script>
+    const readings = '<%= readings %>';
+    const dates = '<%= date %>';
+    console.log("Readings :", readings);
+    console.log("Dates :", dates);
+
+    const readingsArray = readings.split(",");
+    const datesArray = dates.replace(/ GMT\+0530 \(India Standard Time\)$/, "").split(" GMT+0530 (India Standard Time),");
+
+    // replace("thing to be replaced","kisse replace krna h")
+
+    console.log(readingsArray);
+    console.log(datesArray);
+
+
     var ctx = document.getElementById('myChart');
     var myChart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
+            labels: datesArray,
             datasets: [{
-                label: '# of Votes',
-                data: [12, 19, 3, 5, 2, 3],
+                label: 'Device Readings',
+                data: readingsArray,
                 backgroundColor: [
                     'rgba(255, 99, 132, 0.2)',
                     'rgba(54, 162, 235, 0.2)',

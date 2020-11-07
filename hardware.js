@@ -28,7 +28,7 @@ board.on("ready", () => {
   app.get("/on",function(request,response){
 
       //Request platform server
-      fetch("http://127.0.0.1:5000/deviceping/d509efc7b006b&ac@gmail.com")
+      fetch("http://127.0.0.1:5000/deviceping/6c26c96f92db1&ac@gmail.com&Blinking")
       .then(response=>response.json())
       .then((result)=>{
           console.log(result);
@@ -49,7 +49,7 @@ board.on("ready", () => {
                         "distance" :`${centimeters} cms`,
                         "reading" : centimeters,
                         "status" : `LED on !`,
-                        "time" : new Date().toLocaleString().split(",")[0]
+                        "time" : new Date().toString()
                     };
 
                     readings.push(data);
@@ -62,7 +62,7 @@ board.on("ready", () => {
                         headers : {'Content-Type':'application/json'}
                     };
 
-                    fetch('http://127.0.0.1:5000/device/data/d509efc7b006b',options)
+                    fetch('http://127.0.0.1:5000/device/data/6c26c96f92db1&Blinking',options)
                     .then(res=>res.json())
                     .then((json)=>{
                         console.log("Message from server :",json);
