@@ -72,10 +72,22 @@ function validateKey(request,response,next){
 
         //Usage day exists or not !
         const usageIndex = account.usage.findIndex(user=>user.date === today);
+        var API_COUNT;
 
-        if(usageIndex >=0){
+        if(usageIndex >= 0){
+           
+            //Check user's plan
+            if(account.plan === "Free"){
+                API_COUNT = 2;
+            }else{
+                if(account.plan === "Silver"){
+                    API_COUNT = 5;  
+                }else{
+                    API_COUNT = 10; 
+                }
+            };
 
-            if(account.usage[usageIndex].count > 20){
+            if(account.usage[usageIndex].count > API_COUNT){
                 response.json({
                     "error" : "Max calls exceeded !"
                 });
@@ -124,8 +136,10 @@ app.post("/registerDetails",function(request,response){
     console.log("Email :",request.body.email);
     console.log("Password :",request.body.password);
 
-    const email = request.body.email;
-    const password = request.body.password;
+    // const email = request.body.email;
+    // const password = request.body.password;
+    
+    const { email, password, plan} = request.body;
 
     //Registration logic
     //[x]. Empty Array creation named users - (For storing users)
@@ -158,7 +172,6 @@ app.post("/registerDetails",function(request,response){
 
     //     //Send Registration successful message✅ !
     //     response.send("registration successful !🎉");
-
     // };
 
      const getIndex = users.findIndex((user) => user.email === email);
@@ -175,6 +188,7 @@ app.post("/registerDetails",function(request,response){
              _id : Math.random().toString().split(".")[1],
              email : email,
              password : password,
+             plan : plan,
              api_key : Math.random().toString(16).split(".")[1],
              usage :[{
                  date : today,
@@ -209,6 +223,42 @@ app.post("/registerDetails",function(request,response){
      }
 
 });
+
+// Plans
+app.get("/plan",redirectLogin,function(request,response){
+    response.send(`<form action="/updatePlan" method="POST">
+                <select name="plan" id="plan">
+                        <option value="Choose your Plan" hidden>Choose your Plan</option>
+                        <option value="Free">Free</option>
+                        <option value="Silver">Silver</option>
+                        <option value="Gold">Gold</option>
+                </select>     
+                <button>Update</button>   
+                </form>`)
+});
+
+app.post("/updatePlan",function(request,response){
+    console.log(request.session);
+    const email = request.session.Email;
+    const {plan } = request.body;
+    console.log("Plan :",plan);
+
+    //Find index of that user
+    const getIndex = users.findIndex((user)=>user.email === email);
+
+    // console.log(getIndex);
+    users[getIndex].plan = plan;
+
+    // Reset Count
+    let today = new Date().toLocaleString().split(",")[0];
+    const usageIndex = users[getIndex].usage.findIndex((user)=>user.date === today);
+
+    if(usageIndex >= 0){
+        users[getIndex].usage[usageIndex].count = 0;
+    };
+
+    console.log(users);
+})
 
 // Login
 app.get("/login",redirectProfile,function(request,response){
@@ -281,33 +331,12 @@ app.post("/projectDetails",function(request,response){
     console.log("Pin Number :",users[getIndex].pinNumber);
     console.log("description :",users[getIndex].projectDescription);
 
-    // response.send("Data stored successfully !");
+
     response.json({
         "message" : "Data stored successfully !"
     });
 
 });
-
-
-//For testing and nothing for use !
-//Made just to check !
-// const dummy_data = [{
-//     date : new Date().toLocaleString().split(",")[0],
-//     reading : 2.5
-// },{
-//     date : new Date().toLocaleString().split(",")[0],
-//     reading : 3
-// },{
-//     date : new Date().toLocaleString().split(",")[0],
-//     reading : 5
-// }
-// ];
-
-// app.get("/projectdata/:key&:email",redirectLogin,validateKey,function(request,response){
-//     response.json({
-//         "data" : dummy_data
-//     });
-// });
 
 
 app.get("/deviceping/:key&:email&:title",validateKey,function(request,response){
@@ -329,6 +358,15 @@ app.get("/deviceping/:key&:email&:title",validateKey,function(request,response){
             }]
         };
 
+        // projectName : ['Sensor','Led Blink','Motor','xyz']
+        // data : [{
+        //     deviceData: []
+        // },{
+        //     deviceData: []
+        // },{
+        //     deviceData: []
+        // }]
+
         userData.push(data_object);
         console.log(userData);
     }else{
@@ -338,7 +376,7 @@ app.get("/deviceping/:key&:email&:title",validateKey,function(request,response){
         
         if(titleIndex < 0){
             userData[getIndex].projectName.push(title);
-            userData[getIndex].data.push({deviceData : []});
+            userData[getIndex].data.push({ deviceData : []});
         };
 
         console.log(userData);
@@ -401,9 +439,11 @@ app.post("/device/data/:api_key&:title",function(request,response){
     response.json({
         "success" : "Data collected successfully !"
     });
+
 });
 
 app.get("/graph/:title",redirectLogin,function(request,response){
+
     const key = request.session.key;
     const title = request.params.title;
 
