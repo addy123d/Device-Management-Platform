@@ -50,42 +50,53 @@
 
 
         if (titleValue.includes("motor")) {
-            code.value = `  const {Board, Servo} = require("johnny-five");
+            code.value = `const { Board, Servo } = require("johnny-five");
                             const board = new Board();
 
                             board.on("ready", () => {
+                            //Pin declarations
                             const servo = new Servo(${number.value});
 
-                            // Server Configuration
+
                             const express = require("express");
                             const fetch = require("node-fetch");
-                            const host = "${ip.value}"";
+                            const host = "${ip.value}";
                             const port = 3000;
 
-                            const app = express();
+
+                            var app = express();
+
+                            const readings = [];
 
                             app.get("/",function(request,response){
-                                response.send("<a href = "/on"> Motor On</a> ")
-                            })
+                            response.send("<a href = "/on" > Start Device</a>");
+                            });
 
                             app.get("/on",function(request,response){
-                                //Blink
-                                servo.sweep();
 
-                                //Request platform server
+                            //Request platform server
+                            fetch("http://127.0.0.1:5000/deviceping/<api_key>&<email>&${title.value.replace(" ", "")}")
+                            .then(response=>response.json())
+                            .then((result)=>{
+                            console.log(result);
+                            //Blink
+                            if(result.error === 'You are not allowed !' || result.error === "Max calls exceeded !"){
+                            return response.send(result.error);
+                            };
 
-                                fetch("http://127.0.0.1:5000/deviceping/<api_key>&<email>")
-                                .then(response=>response.json())
-                                .then((result)=>{
-                                    console.log(result);
-                                })
-                                .catch(err=>console.log(err));
+                            //Alright
+                            servo.sweep(); 
+                            return response.json({"message" : "Data sending ...."});
+                            })
+                            .catch(function(err){
+                                console.log(err);
+                                });
 
-                                response.send("Motor is working !");
+
                             });
 
                             app.listen(port,host,function(){
-                                console.log("Server is running...");
+                            console.log("server is running ......");
                             })
 
 
@@ -109,14 +120,14 @@
                             const app = express();
 
                             app.get("/",function(request,response){
-                                response.send("<a href = "/on" > Led On</a> 
+                                response.send("<a href = "/on"> Led On</a> 
                                                 <a href = "/off" > Led Off</a>");
                             })
 
                             app.get("/on",function(request,response){
                            
                                 //Request platform server
-                                fetch("http://127.0.0.1:5000/deviceping/<api_key>&<email>")
+                                fetch("http://127.0.0.1:5000/deviceping/<api_key>&<email>$${title.value.replace(" ", "")}")
                                 .then(response=>response.json())
                                 .then((result)=>{
                                     console.log(result);
@@ -126,7 +137,7 @@
                                         response.send(result.error);
                                     }else{
                                         led.blink(1000);
-                                        response.send("Connected with platform server !");
+                                        return response.send("Connected with platform server !");
                                     }
                                 })
                                 .catch(err=>console.log(err));
@@ -135,7 +146,7 @@
                               app.get("/off",function(request,response){
                            
                                 //Request platform server
-                                fetch("http://127.0.0.1:5000/deviceping/<api_key>&<email>")
+                                fetch("http://127.0.0.1:5000/deviceping/<api_key>&<email>${title.value.replace(" ", "")}")
                                 .then(response=>response.json())
                                 .then((result)=>{
                                     console.log(result);
@@ -145,7 +156,7 @@
                                         response.send(result.error);
                                     }else{
                                         led.stop().off();
-                                        response.send("Connected with platform server!");
+                                        return response.send("Connected with platform server!");
                                     }
                                 })
                                 .catch(err=>console.log(err));
@@ -159,10 +170,101 @@
                             });`;
         }
 
-        // if (titleValue.includes("sensor")) {
-        //     console.log("Sensor code...Now not available !");
-        //     code.value = "Sensor code...Now not available !";
-        // }
+        if (titleValue.includes("sensor") || titleValue.includes("ultrasonic sensor") || titleValue.includes("ultrasonic")) {
+            code.value = `const { Board, Proximity, Led } = require("johnny-five");
+                            const board = new Board();
+
+                            board.on("ready", () => {
+                            //Pin declarations
+                            const proximity = new Proximity({
+                            controller: "HCSR04",
+                            pin: ${number.value}
+                            });
+
+                            const led = new Led(13);
+
+                            const express = require("express");
+                            const fetch = require("node-fetch");
+                            const host = "${ip.value}";
+                            const port = 3000;
+
+
+                            var app = express();
+
+                            const readings = [];
+
+                            app.get("/",function(request,response){
+                            response.send("<a href = "/on" > Start Device</a >
+                                            <a href="/checkdata">Check data</a>");
+                            });
+
+                            app.get("/on",function(request,response){
+
+                                //Request platform server
+                                fetch("http://127.0.0.1:5000/deviceping/<api_key>&<email>&${title.value.replace(" ", "")}")
+                                .then(response=>response.json())
+                                .then((result)=>{
+                                console.log(result);
+                                //Blink
+                                if(result.error === 'You are not allowed !' || result.error === "Max calls exceeded !"){
+                                    return response.send(result.error);
+                                };
+
+                                //Alright
+                                proximity.on("change", () => {
+                                    const {centimeters} = proximity;
+                                    console.log("  cm  : ", centimeters);
+
+                                    if(centimeters < 5){
+                                        led.on();
+
+                                        const data = {
+                                            "distance" :"<centimeters> cms",
+                                            "reading" : centimeters,
+                                            "status" : "LED on!",
+                                            "time" : new Date().toString()
+                                        };
+
+                                    readings.push(data);
+
+                                    //Post data using fetch
+
+                                    const options = {
+                                    method : 'post',
+                                    body : JSON.stringify(readings[readings.length-1]),
+                                    headers : {'Content-Type':'application/json'}
+                                    };
+
+                                    fetch('http://127.0.0.1:5000/device/data/<api_key>&${title.value.replace(" ", "")}',options)
+                                    .then(res=>res.json())
+                                    .then((json)=>{
+                                            console.log("Message from server :",json);
+                                    })
+                                    .catch(function(err){
+                                            console.log(err);
+                                    });
+                                    }else{
+                                            led.off();
+                                    };
+
+                                });
+
+                                    return response.json({"message" : "Data sending ...."});
+                                }).
+                                catch(function(err){
+                                    console.log(err);
+                                });
+
+
+                                });
+
+                                app.listen(port,host,function(){
+                                    console.log("server is running ......");
+                                })
+
+
+                                });`;
+        }
 
         const options = {
             method: "POST",
@@ -198,3 +300,81 @@
 </script>
 
 </html>
+
+
+
+<!-- const { Board, Proximity, Led } = require("johnny-five");
+const board = new Board();
+
+board.on("ready", () => {
+//Pin declarations
+const proximity = new Proximity({
+controller: "HCSR04",
+pin: 4
+});
+
+const led = new Led(13);
+
+const express = require("express");
+const fetch = require("node-fetch");
+const host = '127.0.0.1';
+const port = 3000;
+
+
+var app = express();
+
+const readings = [];
+
+app.get("/",function(request,response){
+response.send(`<a href="/on">Start Device</a>
+<a href="/checkdata">Check data</a>`);
+});
+
+app.get("/on",function(request,response){
+
+//Request platform server
+fetch("http://127.0.0.1:5000/deviceping/52f335cc98fc6&ac@gmail.com&LedBlink")
+.then(response=>response.json())
+.then((result)=>{
+console.log(result);
+//Blink
+if(result.error === 'You are not allowed !' || result.error === "Max calls exceeded !"){
+return response.send(result.error);
+};
+
+//Alright
+proximity.on("change", () => {
+const {centimeters} = proximity;
+console.log(" cm : ", centimeters);
+
+if(centimeters < 5){ led.on(); const data={ "distance" :`${centimeters} cms`, "reading" : centimeters, "status" : `LED
+    on !`, "time" : new Date().toString() }; readings.push(data); //Post data using fetch const options={ method
+    : 'post' , body : JSON.stringify(readings[readings.length-1]), headers : {'Content-Type':'application/json'} };
+    fetch('http://127.0.0.1:5000/device/data/52f335cc98fc6&LedBlink',options) .then(res=>res.json())
+    .then((json)=>{
+    console.log("Message from server :",json);
+    })
+    .catch(function(err){
+    console.log(err);
+    });
+    }else{
+    led.off();
+    }
+
+    });
+
+    return response.json({"message" : "Data sending ...."});
+    }).
+    catch(function(err){
+    console.log(err);
+    });
+
+
+    });
+
+    app.listen(port,host,function(){
+    console.log("server is running ......");
+    })
+
+
+    }); -->

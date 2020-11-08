@@ -11,6 +11,12 @@
     <form action="/registerDetails" method="POST">
         <input type="email" name="email" placeholder="Email📧" autocomplete="off">
         <input type="password" name="password" placeholder="Choose Password" autocomplete="off">
+        <select name="plan" id="plan">
+            <option value="Choose your Plan" hidden>Choose your Plan</option>
+            <option value="Free">Free</option>
+            <option value="Silver">Silver</option>
+            <option value="Gold">Gold</option>
+        </select>
         <button>Submit</button>
     </form>
 </body>
