@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update Your Plan</title>
+</head>
+
+<body>
+
+    <form action="/updatePlan" method="POST">
+        <select name="plan" id="plan">
+            <option value="Choose your Plan" hidden>Choose your Plan</option>
+            <% if(usage === "NO") {%>
+            <option value="Free">Free</option>
+            <%}%>
+                <option value="Silver">Silver</option>
+                <option value="Gold">Gold</option>
+        </select>
+        <button>Update</button>
+    </form>
+</body>
+
+</html>

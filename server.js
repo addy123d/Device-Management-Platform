@@ -1,6 +1,8 @@
 // Include dependency (Express)
 const express = require("express");
 const session = require("express-session");
+const mongo = require("mongoose");
+const urlObj = require("./setup/config");
 const ejs = require("ejs");
 const host = "127.0.0.1";
 const port = 5000;
@@ -35,6 +37,21 @@ app.use(express.urlencoded({extended : false}));
 app.use(session(sess));
 
 app.set("view engine","ejs");
+
+//Database Connection
+const options = {
+    useNewUrlParser: true,
+    useUnifiedTopology: true 
+};
+
+
+mongo.connect(urlObj.url,options)
+.then(function(){
+    console.log("Database Connected !");
+})
+.catch(function(err){
+    console.log("Something went wrong !");
+});
 
 //Functions
 function redirectProfile(request,response,next){
@@ -174,6 +191,14 @@ app.post("/registerDetails",function(request,response){
     //     response.send("registration successful !🎉");
     // };
 
+        //For free plan usage check
+        var plan_usage;
+        
+        if(plan === "Free"){
+             plan_usage = "Yes";
+        }else
+            plan_usage = "No";
+
      const getIndex = users.findIndex((user) => user.email === email);
      console.log(getIndex);
     
@@ -189,6 +214,7 @@ app.post("/registerDetails",function(request,response){
              email : email,
              password : password,
              plan : plan,
+             Freeplan_usage : plan_usage,
              api_key : Math.random().toString(16).split(".")[1],
              usage :[{
                  date : today,
@@ -226,15 +252,22 @@ app.post("/registerDetails",function(request,response){
 
 // Plans
 app.get("/plan",redirectLogin,function(request,response){
-    response.send(`<form action="/updatePlan" method="POST">
-                <select name="plan" id="plan">
-                        <option value="Choose your Plan" hidden>Choose your Plan</option>
-                        <option value="Free">Free</option>
-                        <option value="Silver">Silver</option>
-                        <option value="Gold">Gold</option>
-                </select>     
-                <button>Update</button>   
-                </form>`)
+    const email = request.session.Email;
+
+    //Get Index of user
+    const getIndex = users.findIndex((user)=>user.email === email);
+
+
+    if(users[getIndex].Freeplan_usage === "Yes"){
+        return response.render("updatePlan",{
+             usage : "YES"
+         }); 
+    };
+
+    response.render("updatePlan",{
+        usage : "NO"
+    });
+
 });
 
 app.post("/updatePlan",function(request,response){
