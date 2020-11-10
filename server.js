@@ -3,6 +3,7 @@ const express = require("express");
 const session = require("express-session");
 const mongo = require("mongoose");
 const urlObj = require("./setup/config");
+const User = require("./tables/User");
 const ejs = require("ejs");
 const host = "127.0.0.1";
 const port = 5000;
@@ -39,19 +40,19 @@ app.use(session(sess));
 app.set("view engine","ejs");
 
 //Database Connection
-const options = {
-    useNewUrlParser: true,
-    useUnifiedTopology: true 
-};
+    const options = {
+        useNewUrlParser: true,
+        useUnifiedTopology: true 
+    };
 
 
-mongo.connect(urlObj.url,options)
-.then(function(){
-    console.log("Database Connected !");
-})
-.catch(function(err){
-    console.log("Something went wrong !");
-});
+    mongo.connect(urlObj.url,options)
+    .then(function(){
+        console.log("Database Connected !");
+    })
+    .catch(function(err){
+        console.log("Something went wrong !");
+    });
 
 //Functions
 function redirectProfile(request,response,next){
@@ -135,7 +136,7 @@ function validateKey(request,response,next){
 }
 
 //Create array for storing users names users
-const users = [];
+// const users = [];
 const userData = [];
 
 // REQUEST - (Path - /)
@@ -150,103 +151,170 @@ app.get("/register",redirectProfile,function(request,response){
 
 //Collect Registration Details
 app.post("/registerDetails",function(request,response){
-    console.log("Email :",request.body.email);
-    console.log("Password :",request.body.password);
 
-    // const email = request.body.email;
-    // const password = request.body.password;
-    
+    // USING DATABASE
     const { email, password, plan} = request.body;
 
-    //Registration logic
-    //[x]. Empty Array creation named users - (For storing users)
-    //[x]. Create user object - (properties - email,password,id,token_id)
-    //[x]. PUSH user object into an users array
+    User.findOne({email : email})
+    .then(function(person){
 
-    //Check if user exists or not !
+        // Check if person exists or not !
+        if(person){
+            response.json({
+                "emailerr" : "Already Registered !"
+            })
+        }else{
+            //For free plan usage check
+            var plan_usage;
 
-    // var userExists = false;
+            if(plan === "Free"){
+            plan_usage = "Yes";
+            }else
+            plan_usage = "No";
 
-    // for (var i = 0 ; i< users.length ; i++){
-    //     if(users[i].email === email){
-    //         userExists = true;
-    //         break;
-    //     };
-    // };
+            let today = new Date().toLocaleString().split(",")[0];
 
-    // if(userExists === true){
-    //     response.send("Error : User Exists Already !❌");
-    // }else{
-    //     //Create User object👤
-    //     let user = {
-    //         email : email,
-    //         password : password
-    //     }
+            let user = {
+                email : email,
+                password : password,
+                plan : plan,
+                Freeplan_usage : plan_usage,
+                api_key : Math.random().toString(16).split(".")[1],
+                usage :[{
+                date : today,
+                count : 0
+                }],
+                projectTitle : [],
+                ips : [],
+                pinNumber : [],
+                projectDescription : []
+            };
 
-    //     //Push user object into users array !
+            //SAVING USER DETAILS IN DB
+            new User(user).save()
+            .then(function(user){
+                console.log("User Registered !");
+
+            //Store data into cookie🍪
+            request.session.Email = user.email;
+            request.session.Password = user.password;
+            request.session.key = user.api_key;
+            console.log(request.session);
+
+
+            // Response
+            response.send(`<h1>Registered ! Your key - ${user.api_key}</h1>
+                           <a href="/addnewproject"><button>New Project</button></a>`);
+
+            })
+            .catch(function(err){
+                console.log("Error :",err);
+            });
+        }    
+    })
+    .catch(function(err){
+        console.log("Error :",err);
+     });
+
+
+    // USING ARRAYS :
+    // console.log("Email :",request.body.email);
+    // console.log("Password :",request.body.password);
+
+    // // const email = request.body.email;
+    // // const password = request.body.password;
+    
+    // const { email, password, plan} = request.body;
+
+    // //Registration logic
+    // //[x]. Empty Array creation named users - (For storing users)
+    // //[x]. Create user object - (properties - email,password,id,token_id)
+    // //[x]. PUSH user object into an users array
+
+    // //Check if user exists or not !
+
+    // // var userExists = false;
+
+    // // for (var i = 0 ; i< users.length ; i++){
+    // //     if(users[i].email === email){
+    // //         userExists = true;
+    // //         break;
+    // //     };
+    // // };
+
+    // // if(userExists === true){
+    // //     response.send("Error : User Exists Already !❌");
+    // // }else{
+    // //     //Create User object👤
+    // //     let user = {
+    // //         email : email,
+    // //         password : password
+    // //     }
+
+    // //     //Push user object into users array !
+    // //     users.push(user);
+    // //     console.log(users);
+
+    // //     //Send Registration successful message✅ !
+    // //     response.send("registration successful !🎉");
+    // // };
+
+    //     //For free plan usage check
+    //     var plan_usage;
+        
+    //     if(plan === "Free"){
+    //          plan_usage = "Yes";
+    //     }else
+    //         plan_usage = "No";
+
+    //  const getIndex = users.findIndex((user) => user.email === email);
+    //  console.log(getIndex);
+    
+    //  if(getIndex < 0){
+
+    //     //const,var,let
+    //     let today = new Date().toLocaleString().split(",")[0];
+
+
+    //     //  Create User object👤
+    //      let user = {
+    //         //  _id : Math.random().toString().split(".")[1],
+    //          email : email,
+    //          password : password,
+    //          plan : plan,
+    //          Freeplan_usage : plan_usage,
+    //          api_key : Math.random().toString(16).split(".")[1],
+    //          usage :[{
+    //              date : today,
+    //              count : 0
+    //          }],
+    //          projectTitle : [],
+    //          ips : [],
+    //          pinNumber : [],
+    //          projectDescription : []
+    //      }
+
+    //     //  Push user object into users array !
     //     users.push(user);
     //     console.log(users);
 
-    //     //Send Registration successful message✅ !
-    //     response.send("registration successful !🎉");
-    // };
+    //     //  Send Registration successful message✅ !
+    //     // response.send("registration successful !🎉");
 
-        //For free plan usage check
-        var plan_usage;
+    //     //Store data into cookie🍪
+    //     request.session.Email = email;
+    //     request.session.Password = password;
+
+    //     console.log(request.session);
+
+    //     response.send(`<h1>Registered ! Your key - ${user.api_key}</h1>
+    //                     <a href="/addnewproject"><button>New Project</button></a>`);
+
+    //  }else{
         
-        if(plan === "Free"){
-             plan_usage = "Yes";
-        }else
-            plan_usage = "No";
-
-     const getIndex = users.findIndex((user) => user.email === email);
-     console.log(getIndex);
-    
-     if(getIndex < 0){
-
-        //const,var,let
-        let today = new Date().toLocaleString().split(",")[0];
-
-
-        //  Create User object👤
-         let user = {
-             _id : Math.random().toString().split(".")[1],
-             email : email,
-             password : password,
-             plan : plan,
-             Freeplan_usage : plan_usage,
-             api_key : Math.random().toString(16).split(".")[1],
-             usage :[{
-                 date : today,
-                 count : 0
-             }],
-             projectTitle : [],
-             ips : [],
-             pinNumber : [],
-             projectDescription : []
-         }
-
-        //  Push user object into users array !
-        users.push(user);
-        console.log(users);
-
-        //  Send Registration successful message✅ !
-        // response.send("registration successful !🎉");
-
-        //Store data into cookie🍪
-        request.session.Email = email;
-        request.session.Password = password;
-
-        console.log(request.session);
-
-        response.send(`<h1>Registered ! Your key - ${user.api_key}</h1>
-                        <a href="/addnewproject"><button>New Project</button></a>`);
-
-     }else{
-        
-        //  Send Error message❌ !
-          response.send("Error !");
-     }
+    //     //  Send Error message❌ !
+    //       response.send("Error !");
+    //  }
 
 });
 
@@ -299,40 +367,75 @@ app.get("/login",redirectProfile,function(request,response){
 });
 
 app.post("/loginDetails",function(request,response){
-    const email = request.body.email;
-    const password = request.body.password;
+    // const email = request.body.email;
+    // const password = request.body.password;
+
+    const {email, password} = request.body;
 
     console.log("Email :",email);
     console.log("Password :",password);
 
+    // Using DB :
+    User.findOne({email : email})
+    .then(function(person){
+        if(!person){
+            response.json({
+                "err"  : "User doesn't exists !"
+            });
+        }else{
 
-    //Login logic
-    //x[]Search users array and check whether user exists or not !
-    //x[] If user doesn't exists then send error message
-
-    const getIndex = users.findIndex((user)=>user.email === email);
-    console.log("Index :",getIndex);
-
-    if(getIndex < 0){
-        response.send("Error : User doesn't exists !😥");
-    }else{
         //User exists !
         //Password matching
-        if(users[getIndex].password === password){
-            // response.send("Success : Logged In !🎉");
+        if(person.password === password){
 
+        console.log("Logged In !");
          //Store data into cookie🍪
-        request.session.Email = users[getIndex].email;
-        request.session.Password = users[getIndex].password;
-        request.session.key = users[getIndex].api_key;
+        request.session.Email = person.email;
+        request.session.Password = person.password;
+        request.session.key = person.api_key;
 
         console.log(request.session);
 
         response.redirect("/addnewproject");
         }else{
             response.send("Error :Password Incorrect !❌");
-        }
-    }
+        } 
+        
+        };
+    })
+    .catch(function(err){
+        console.log("Error :",err);
+    });
+
+
+    //Using Arrays :
+    // //Login logic
+    // //x[]Search users array and check whether user exists or not !
+    // //x[] If user doesn't exists then send error message
+
+    // const getIndex = users.findIndex((user)=>user.email === email);
+    // console.log("Index :",getIndex);
+
+    // if(getIndex < 0){
+    //     response.send("Error : User doesn't exists !😥");
+    // }else{
+    //     //User exists !
+    //     //Password matching
+    //     if(users[getIndex].password === password){
+    //         // response.send("Success : Logged In !🎉");
+
+    //      //Store data into cookie🍪
+    //     request.session.Email = users[getIndex].email;
+    //     request.session.Password = users[getIndex].password;
+    //     request.session.key = users[getIndex].api_key;
+
+    //     console.log(request.session);
+
+    //     response.redirect("/addnewproject");
+    //     }else{
+    //         response.send("Error :Password Incorrect !❌");
+    //     }
+    // }
 
 });
 
