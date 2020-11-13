@@ -35,38 +35,38 @@ const userSchema = new schema({
         }
     ],
     //Idea to be executed
-    // projectData : [
-    //     {
-    //         projectTitle :{
-
-    //         },
-    //         ips : {
-
-    //         },
-    //         pinNumber : {
-
-    //         },
-    //         projectDescription: {
-
-    //         }
-    //     }
-    // ]
-    projectTitle :{
-        type : Array,
-        required :  true
-    },
-    ips :{
-        type : Array,
-        required :  true
-    },
-    pinNumber :{
-        type : Array,
-        required :  true
-    },
-    projectDescription :{
-        type : Array,
-        required :  true
-    }
+    projectData : [
+        {
+            projectTitle :{
+                type : String,
+            },
+            ips : {
+                type : String,
+            },
+            pinNumber : {
+                type : String,
+            },
+            projectDescription: {
+                type : String,
+            }
+        }
+    ]
+    // projectTitle :{
+    //     type : Array,
+    //     required :  true
+    // },
+    // ips :{
+    //     type : Array,
+    //     required :  true
+    // },
+    // pinNumber :{
+    //     type : Array,
+    //     required :  true
+    // },
+    // projectDescription :{
+    //     type : Array,
+    //     required :  true
+    // }
 });
 
 module.exports = User = mongoose.model("myUser",userSchema);
