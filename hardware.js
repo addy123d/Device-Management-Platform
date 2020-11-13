@@ -6,7 +6,7 @@ board.on("ready", () => {
     //Pin declarations
   const proximity = new Proximity({
     controller: "HCSR04",
-    pin: 4
+    pin: 6
   });
 
   const led = new Led(13);
@@ -29,7 +29,7 @@ board.on("ready", () => {
   app.get("/on",function(request,response){
 
       //Request platform server
-      fetch("http://127.0.0.1:5000/deviceping/8a5befb45694&ac@gmail.com&Sensor")
+      fetch("http://127.0.0.1:5000/deviceping/61fb1c9acb6d5&ac@gmail.com&LED")
       .then(response=>response.json())
       .then((result)=>{
           console.log(result);
@@ -63,7 +63,7 @@ board.on("ready", () => {
                         headers : {'Content-Type':'application/json'}
                     };
 
-                    fetch('http://127.0.0.1:5000/device/data/ 8a5befb45694&Sensor',options)
+                    fetch('http://127.0.0.1:5000/device/data/61fb1c9acb6d5&LED',options)
                     .then(res=>res.json())
                     .then((json)=>{
                         console.log("Message from server :",json);
