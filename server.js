@@ -295,17 +295,12 @@ app.post("/registerDetails",function(request,response){
                 date : today,
                 count : 0
                 }],
-                projectTitle : [],
-                ips : [],
-                pinNumber : [],
-                projectDescription : []
+                // projectTitle : [],
+                // ips : [],
+                // pinNumber : [],
+                // projectDescription : []
                 //Idea to be executed
-                // projectData : [{
-                //     projectTitle : "",
-                //     ips : '',
-                //     pinNumber : "",
-                //     projectDescription : ""
-                // }]
+                projectData : []
             };
 
             //SAVING USER DETAILS IN DB
@@ -434,6 +429,35 @@ app.post("/registerDetails",function(request,response){
     //       response.send("Error !");
     //  }
 
+});
+
+app.get("/delete",redirectLogin,function(request,response){
+
+    //Send project Title to determine the project for deletion !
+    response.send(`<form action="/deleteProject" method="POST">
+                    <input type="text" name="title" placeholder="Enter Project Title" autocomplete="off">
+                    <button>Delete Project</button>
+                    </form>`);
+});
+
+app.post("/deleteProject",function(request,response){
+    const email = request.session.Email;
+    const title = request.body.title;
+
+    //Logic for project Deletion
+    User.updateOne(
+        {email : email},
+        {$pull : {projectData : {projectTitle : title} }},
+        { multi: true }
+    )
+    .then(()=>{
+        console.log('Project Deleted Successfully !');
+    })
+    .catch(function(err){
+        console.log("Error :",err);
+    });
+
+    
 });
 
 // Plans
@@ -613,17 +637,17 @@ app.post("/projectDetails",function(request,response){
             email : email
         },{
             $push : {
-                projectTitle : title,
-                ips : ip,
-                pinNumber : pinNumber,
-                projectDescription : description
+                // projectTitle : title,
+                // ips : ip,
+                // pinNumber : pinNumber,
+                // projectDescription : description
                 //Idea to be executed
-                // projectData : {
-                //         projectTitle : title,
-                //         ips : ip,
-                //         pinNumber : pinNumber,
-                //         projectDescription : description
-                // }
+                projectData : {
+                        projectTitle : title,
+                        ips : ip,
+                        pinNumber : pinNumber,
+                        projectDescription : description
+                }
             }
         },
         {

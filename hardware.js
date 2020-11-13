@@ -29,7 +29,7 @@ board.on("ready", () => {
   app.get("/on",function(request,response){
 
       //Request platform server
-      fetch("http://127.0.0.1:5000/deviceping/61fb1c9acb6d5&ac@gmail.com&LED")
+      fetch("http://127.0.0.1:5000/deviceping/7b65d72b6f6d1&ac@gmail.com&Sensorwithled")
       .then(response=>response.json())
       .then((result)=>{
           console.log(result);
@@ -63,7 +63,7 @@ board.on("ready", () => {
                         headers : {'Content-Type':'application/json'}
                     };
 
-                    fetch('http://127.0.0.1:5000/device/data/61fb1c9acb6d5&LED',options)
+                    fetch('http://127.0.0.1:5000/device/data/7b65d72b6f6d1&Sensorwithled',options)
                     .then(res=>res.json())
                     .then((json)=>{
                         console.log("Message from server :",json);
