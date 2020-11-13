@@ -4,6 +4,7 @@ const session = require("express-session");
 const mongo = require("mongoose");
 const urlObj = require("./setup/config");
 const User = require("./tables/User");
+const Data  = require("./tables/Data");
 const ejs = require("ejs");
 const host = "127.0.0.1";
 const port = 5000;
@@ -42,7 +43,8 @@ app.set("view engine","ejs");
 //Database Connection
     const options = {
         useNewUrlParser: true,
-        useUnifiedTopology: true 
+        useUnifiedTopology: true,
+        useFindAndModify : false 
     };
 
 
@@ -81,63 +83,172 @@ function validateKey(request,response,next){
     const email = request.params.email;
     const key = request.params.key;
 
-    //Check if account exists or not
-    const account = users.find((user)=> user.email === email && user.api_key === key);
-
-    //object or undefined
-    if(account){
+    //USING DB :
+    User.findOne({api_key : key})
+    .then(function(person){
+        if(person){
         let today = new Date().toLocaleString().split(",")[0];
 
         //Usage day exists or not !
-        const usageIndex = account.usage.findIndex(user=>user.date === today);
+        const usageIndex = person.usage.findIndex(user=>user.date === today);
+
         var API_COUNT;
 
         if(usageIndex >= 0){
            
             //Check user's plan
-            if(account.plan === "Free"){
+            if(person.plan === "Free"){
                 API_COUNT = 2;
             }else{
-                if(account.plan === "Silver"){
+                if(person.plan === "Silver"){
                     API_COUNT = 5;  
                 }else{
                     API_COUNT = 10; 
                 }
             };
 
-            if(account.usage[usageIndex].count > API_COUNT){
+            if(person.usage[usageIndex].count > API_COUNT){
                 response.json({
                     "error" : "Max calls exceeded !"
                 });
             }else{
-                account.usage[usageIndex].count++;
-                console.log("Count :",account.usage[usageIndex].count);
-                next();
+                person.usage[usageIndex].count++;
+                console.log("Count :",person.usage[usageIndex].count);
+
+
+                let updatedCount = person.usage[usageIndex].count;
+
+                // users = [{
+                //     key : key,
+                //     usage : [{
+                //         date ,
+                //         count
+                //     }]
+                // },{
+                //     key : key,
+                //     usage : [{
+                //         date ,
+                //         count
+                //     }]
+                // },{
+                //     key : key,
+                //     usage : [{
+                //         date ,
+                //         count
+                //     }]
+                // }]
+                User.updateOne(
+                    { api_key: key, "usage.date": today },  //api_key is to find user in database, usage.date is to find which day we have to track or update count !
+                    { $set: { "usage.$.count" : updatedCount } }
+                )
+                .then(()=>{
+                    console.log("Updated Successfully !");
+                    next();
+                })
+                .catch(err=>console.log(err))
+
             }
 
         }else{
 
-            account.usage.push({
-                date : today,
-                count : 0
-            });
-
-            console.log("Account Usage :",account.usage);
+            User.findOneAndUpdate({
+                api_key : key
+            },
+            {
+                $push : {
+                    usage :  {
+                            date : today,
+                            count : 0
+                        }
+                }
+            },
+            {
+                new : true
+            })
+            .then((person)=>{
+                
+            console.log("Account Usage :",person.usage);
 
             next();
-        }
-    }else{
+            })
+            .catch(err=>console.log(err));
 
+            // account.usage.push({
+            //     date : today,
+            //     count : 0
+            // });
+
+        }
+   
+
+        }else{
         response.json({
             "error" : "You are not allowed !"
         });
+        }
+    })
+    .catch(function(err){
+        console.log("Error :",err);
+    })
 
-    }
+    //USING ARRAYS :
+    // //Check if account exists or not
+    // const account = users.find((user)=> user.email === email && user.api_key === key);
+
+    // //object or undefined
+    // if(account){
+    //     let today = new Date().toLocaleString().split(",")[0];
+
+    //     //Usage day exists or not !
+    //     const usageIndex = account.usage.findIndex(user=>user.date === today);
+    //     var API_COUNT;
+
+    //     if(usageIndex >= 0){
+           
+    //         //Check user's plan
+    //         if(account.plan === "Free"){
+    //             API_COUNT = 2;
+    //         }else{
+    //             if(account.plan === "Silver"){
+    //                 API_COUNT = 5;  
+    //             }else{
+    //                 API_COUNT = 10; 
+    //             }
+    //         };
+
+    //         if(account.usage[usageIndex].count > API_COUNT){
+    //             response.json({
+    //                 "error" : "Max calls exceeded !"
+    //             });
+    //         }else{
+    //             account.usage[usageIndex].count++;
+    //             console.log("Count :",account.usage[usageIndex].count);
+    //             next();
+    //         }
+
+    //     }else{
+
+    //         account.usage.push({
+    //             date : today,
+    //             count : 0
+    //         });
+
+    //         console.log("Account Usage :",account.usage);
+
+    //         next();
+    //     }
+    // }else{
+
+    //     response.json({
+    //         "error" : "You are not allowed !"
+    //     });
+
+    // }
 }
 
 //Create array for storing users names users
 // const users = [];
-const userData = [];
+// const userData = [];
 
 // REQUEST - (Path - /)
 // RESPONSE - HTML page 
@@ -188,6 +299,13 @@ app.post("/registerDetails",function(request,response){
                 ips : [],
                 pinNumber : [],
                 projectDescription : []
+                //Idea to be executed
+                // projectData : [{
+                //     projectTitle : "",
+                //     ips : '',
+                //     pinNumber : "",
+                //     projectDescription : ""
+                // }]
             };
 
             //SAVING USER DETAILS IN DB
@@ -322,19 +440,40 @@ app.post("/registerDetails",function(request,response){
 app.get("/plan",redirectLogin,function(request,response){
     const email = request.session.Email;
 
-    //Get Index of user
-    const getIndex = users.findIndex((user)=>user.email === email);
+    //USING DB :
+    User.findOne({email : email})
+    .then(function(person){
 
+        //Check for the user's free plan usage
+            if(person.Freeplan_usage === "Yes"){
+                return response.render("updatePlan",{
+                    usage : "YES"
+                }); 
+            }else{
+                response.render("updatePlan",{
+                    usage : "NO"
+                });
+            };
 
-    if(users[getIndex].Freeplan_usage === "Yes"){
-        return response.render("updatePlan",{
-             usage : "YES"
-         }); 
-    };
-
-    response.render("updatePlan",{
-        usage : "NO"
+    })
+    .catch(function(err){
+        console.log("Error :",err);
     });
+
+    //USING ARRAYS :
+    // //Get Index of user
+    // const getIndex = users.findIndex((user)=>user.email === email);
+
+
+    // if(users[getIndex].Freeplan_usage === "Yes"){
+    //     return response.render("updatePlan",{
+    //          usage : "YES"
+    //      }); 
+    // };
+
+    // response.render("updatePlan",{
+    //     usage : "NO"
+    // });
 
 });
 
@@ -342,23 +481,42 @@ app.post("/updatePlan",function(request,response){
     console.log(request.session);
     const email = request.session.Email;
     const {plan } = request.body;
+    let today = new Date().toLocaleString().split(",")[0];
     console.log("Plan :",plan);
 
-    //Find index of that user
-    const getIndex = users.findIndex((user)=>user.email === email);
+    // USING DB :
+    User.findOne({email : email}).then(function(person){
+        User.updateOne(
+            {email : email,'usage.date' : today},
+            {$set : {'plan' : plan,'usage.$.count' : 0}}
+        )
+        .then(()=>{
+            console.log('Plan updated Successfully !');
+        })
+        .catch(function(err){
+            console.log("Error :",err);
+        });
 
-    // console.log(getIndex);
-    users[getIndex].plan = plan;
+    }).catch(function(err){
+        console.log("Error : ",err);
+    });
 
-    // Reset Count
-    let today = new Date().toLocaleString().split(",")[0];
-    const usageIndex = users[getIndex].usage.findIndex((user)=>user.date === today);
+    //USING ARRAYS :
+    // //Find index of that user
+    // const getIndex = users.findIndex((user)=>user.email === email);
 
-    if(usageIndex >= 0){
-        users[getIndex].usage[usageIndex].count = 0;
-    };
+    // // console.log(getIndex);
+    // users[getIndex].plan = plan;
 
-    console.log(users);
+    // // Reset Count
+    // let today = new Date().toLocaleString().split(",")[0];
+    // const usageIndex = users[getIndex].usage.findIndex((user)=>user.date === today);
+
+    // if(usageIndex >= 0){
+    //     users[getIndex].usage[usageIndex].count = 0;
+    // };
+
+    // console.log(users);
 })
 
 // Login
@@ -450,27 +608,62 @@ app.post("/projectDetails",function(request,response){
     const description = request.body.projDescription; 
     const email = request.session.Email;
 
-    //Steps to push details
-    //Find location of user in array
-    const getIndex = users.findIndex((user)=>user.email === email);
+    // USING DATABASE
+        User.findOneAndUpdate({
+            email : email
+        },{
+            $push : {
+                projectTitle : title,
+                ips : ip,
+                pinNumber : pinNumber,
+                projectDescription : description
+                //Idea to be executed
+                // projectData : {
+                //         projectTitle : title,
+                //         ips : ip,
+                //         pinNumber : pinNumber,
+                //         projectDescription : description
+                // }
+            }
+        },
+        {
+            new :  true
+        }
+        )
+        .then(function(){
+            console.log("Updated successfully !");
+            response.json({
+            "message" : "Data stored successfully !"
+            });
+        })
+        .catch(function(err){
+            console.log(err);
+        })
 
-    console.log("Index :",getIndex);
 
-    //Push details
-    users[getIndex].projectTitle.push(title);
-    users[getIndex].ips.push(ip);
-    users[getIndex].pinNumber.push(pinNumber);
-    users[getIndex].projectDescription.push(description);
+    // USING ARRAYS:
 
-    console.log("Titles :",users[getIndex].projectTitle);
-    console.log("IPs :",users[getIndex].ips);
-    console.log("Pin Number :",users[getIndex].pinNumber);
-    console.log("description :",users[getIndex].projectDescription);
+    // //Steps to push details
+    // //Find location of user in array
+    // const getIndex = users.findIndex((user)=>user.email === email);
+
+    // console.log("Index :",getIndex);
+
+    // //Push details
+    // users[getIndex].projectTitle.push(title);
+    // users[getIndex].ips.push(ip);
+    // users[getIndex].pinNumber.push(pinNumber);
+    // users[getIndex].projectDescription.push(description);
+
+    // console.log("Titles :",users[getIndex].projectTitle);
+    // console.log("IPs :",users[getIndex].ips);
+    // console.log("Pin Number :",users[getIndex].pinNumber);
+    // console.log("description :",users[getIndex].projectDescription);
 
 
-    response.json({
-        "message" : "Data stored successfully !"
-    });
+    // response.json({
+    //     "message" : "Data stored successfully !"
+    // });
 
 });
 
@@ -482,47 +675,118 @@ app.get("/deviceping/:key&:email&:title",validateKey,function(request,response){
     const title = request.params.title;
 
     console.log("Key :",key);
-    const getIndex = userData.findIndex((user)=>user.key === key);
 
-    if(getIndex < 0){
-         //Push 
-        const data_object = {
-            key : key,
-            projectName : [title],
-            data :[{
-                deviceData : []
-            }]
-        };
-
-        // projectName : ['Sensor','Led Blink','Motor','xyz']
-        // data : [{
-        //     deviceData: []
-        // },{
-        //     deviceData: []
-        // },{
-        //     deviceData: []
-        // }]
-
-        userData.push(data_object);
-        console.log(userData);
-    }else{
-
-        //Check project name repetition
-        const titleIndex = userData[getIndex].projectName.findIndex((projectTitle)=> projectTitle === title);
+    //USING DB :
+    Data.findOne({key : key})
+    .then(function(person){
+        if(person){
+                ////Check project name repetition
+    //     const titleIndex = userData[getIndex].projectName.findIndex((projectTitle)=> projectTitle === title);
         
+    //     if(titleIndex < 0){
+    //         userData[getIndex].projectName.push(title);
+    //         userData[getIndex].data.push({ deviceData : []});
+    //     };
+
+    //     console.log(userData);
+
+        const titleIndex = person.projectName.findIndex((projectTitle)=> projectTitle === title);
         if(titleIndex < 0){
-            userData[getIndex].projectName.push(title);
-            userData[getIndex].data.push({ deviceData : []});
+            // userData[getIndex].projectName.push(title);
+            // userData[getIndex].data.push({title: title, deviceData : []});
+            Data.findOneAndUpdate({
+                key : key
+            },{
+                $push : {projectName :  title,data : {title : title,deviceData : []}}
+            },
+            {
+                new :  true
+            })
+            .then(()=>{
+            response.status(200).json({
+                        "success": "Connected Successfully !"
+            });
+            })
+            .catch(function(err){
+                console.log(err);
+            });
+        }else{
+
+            response.status(200).json({
+                "success": "Connected Successfully !"
+            });  
+
         };
 
-        console.log(userData);
-    };
+        }else{
+            //If person's data doesn't exists !
+            const data_object = {
+                key : key,
+                projectName : [title],
+                data :[{
+                    title : title,
+                    deviceData : []
+                }]
+            };
 
-    console.log("Data Array :",userData);
-
-    response.status(200).json({
-        "success": "Connected Successfully !"
+            new Data(data_object).save()
+            .then(()=>{
+                response.status(200).json({
+                    "success": "Connected Successfully !"
+                });
+            })
+            .catch(function(err){
+                console.log(err);
+            })
+        }
+    })
+    .catch(function(err){
+        console.log(err);
     });
+
+    //USING ARRAYS :
+
+    // const getIndex = userData.findIndex((user)=>user.key === key);
+
+    // if(getIndex < 0){
+    //     //Push 
+    //     const data_object = {
+    //         key : key,
+    //         projectName : [title],
+    //         data :[{
+    //             deviceData : []
+    //         }]
+    //     };
+
+    //     // projectName : ['Sensor','Led Blink','Motor','xyz']
+    //     // data : [{
+    //     //     deviceData: []
+    //     // },{
+    //     //     deviceData: []
+    //     // },{
+    //     //     deviceData: []
+    //     // }]
+
+    //     userData.push(data_object);
+    //     console.log(userData);
+    // }else{
+
+    //     //Check project name repetition
+    //     const titleIndex = userData[getIndex].projectName.findIndex((projectTitle)=> projectTitle === title);
+        
+    //     if(titleIndex < 0){
+    //         userData[getIndex].projectName.push(title);
+    //         userData[getIndex].data.push({ deviceData : []});
+    //     };
+
+    //     console.log(userData);
+    // };
+
+    // console.log("Data Array :",userData);
+
+    // response.status(200).json({
+    //     "success": "Connected Successfully !"
+    // });
 });
 
 
@@ -541,40 +805,68 @@ app.post("/device/data/:api_key&:title",function(request,response){
     const key = request.params.api_key;
     const projectTitle = request.params.title;
 
-    // Get index && we are checking if user sends data or not !
-    const getIndex = userData.findIndex((user)=> user.key === key);
+    Data.findOne({key : key})
+    .then(function(person){
+            console.log(person);
+
+            const device_data = {
+                distance : distance,
+                reading : reading,
+                status : status,
+                time : time
+            };
+
+            Data.updateOne(
+                { key: key, "data.title": projectTitle },
+                { $push: { "data.$.deviceData" : device_data } }
+            )
+            .then(()=>{
+                console.log("Device Data updated !");
+                response.json({
+                    "success" : "Data collected successfully !"
+                });
+            })
+            .catch(function(err){
+                console.log(err);
+            });
+
+    })
+    .catch(err=>console.log(err));
+
+    // // Get index && we are checking if user sends data or not !
+    // const getIndex = userData.findIndex((user)=> user.key === key);
     
-    //Check project title location for appropriate storage of data corresponding to its title
-    const titleIndex = userData[getIndex].projectName.findIndex((projTitle)=> projTitle === projectTitle);
+    // //Check project title location for appropriate storage of data corresponding to its title
+    // const titleIndex = userData[getIndex].projectName.findIndex((projTitle)=> projTitle === projectTitle);
 
-        const device_data = {
-            distance : distance,
-            reading : reading,
-            status : status,
-            time : time
-        };
+    //     const device_data = {
+    //         distance : distance,
+    //         reading : reading,
+    //         status : status,
+    //         time : time
+    //     };
 
-        userData[getIndex].data[titleIndex].deviceData.push(device_data);
+    //     userData[getIndex].data[titleIndex].deviceData.push(device_data);
 
-        console.log(userData[getIndex].data[titleIndex].deviceData);
+    //     console.log(userData[getIndex].data[titleIndex].deviceData);
         
 
 
-    // const device_data = {
-    //     distance : distance,
-    //     reading : reading,
-    //     status : status,
-    //     time : time
-    // };
+    // // const device_data = {
+    // //     distance : distance,
+    // //     reading : reading,
+    // //     status : status,
+    // //     time : time
+    // // };
 
-    // userData[getIndex].data.push(device_data);
+    // // userData[getIndex].data.push(device_data);
 
-    // console.log("Data :",userData[getIndex].data);
-    // console.log("Data Array :",userData);
+    // // console.log("Data :",userData[getIndex].data);
+    // // console.log("Data Array :",userData);
 
-    response.json({
-        "success" : "Data collected successfully !"
-    });
+    // response.json({
+    //     "success" : "Data collected successfully !"
+    // });
 
 });
 
@@ -583,41 +875,84 @@ app.get("/graph/:title",redirectLogin,function(request,response){
     const key = request.session.key;
     const title = request.params.title;
 
-    //Check if account exists or not
-    const user_accountIndex = userData.findIndex((user)=>user.key === key);
+    // USING DB :
+    Data.findOne({key :  key})
+    .then(function(person){
+        // Check is person is registered in data table or not !
+        if(person){
+            const titleIndex = person.projectName.findIndex((projectTitle)=> projectTitle === title);
 
-    if(user_accountIndex >= 0){ 
+            if(titleIndex >= 0){
+                const dataArray = person.data[titleIndex].deviceData;
 
-        const titleIndex = userData[user_accountIndex].projectName.findIndex((projectTitle)=> projectTitle === title);
+                     let reading = [];
+                     let date = [];
 
-        if(titleIndex >= 0){
-           const dataArray =  userData[user_accountIndex].data[titleIndex].deviceData;
+                    dataArray.forEach(data => {
+                        //Seperate reading and store in reading array
+                        reading.push(data.reading);
 
-        let reading = [];
-        let date = [];
+                        //Seperate time and store in date array
+                        date.push(data.time);
+                    });
 
-        dataArray.forEach(data => {
-            //Seperate reading and store in reading array
-            reading.push(data.reading);
-
-            //Seperate time and store in date array
-            date.push(data.time);
-        });
-
-        console.log("Readings Array :",reading);
-        console.log("Date Array :",date);
-        
-        response.render("graph",{
-            readings : reading,
-            date : date
-        });
-
+                    console.log("Readings Array :",reading);
+                    console.log("Date Array :",date);
+                    
+                    response.render("graph",{
+                        readings : reading,
+                        date : date
+                    });
         }else{
+            //This else is for if project title doesn't exists
             response.send(`Given project doesn't exists.. Create one <a href="/addnewproject">Create New Project</a>`);
         }
-    }else{
-        response.send("No data yet !");
-    }
+        }else{
+            //THis else is for if whhole user doesn't exists or he/she not registered their first project !
+            response.send("No data yet !");
+        }
+    })
+    .catch(function(err){
+        console.log("Error : ",err);
+    });
+
+
+    //USING ARRAYS :
+    // //Check if account exists or not
+    // const user_accountIndex = userData.findIndex((user)=>user.key === key);
+
+    // if(user_accountIndex >= 0){ 
+
+    //     const titleIndex = userData[user_accountIndex].projectName.findIndex((projectTitle)=> projectTitle === title);
+
+    //     if(titleIndex >= 0){
+    //        const dataArray =  userData[user_accountIndex].data[titleIndex].deviceData;
+
+    //     let reading = [];
+    //     let date = [];
+
+    //     dataArray.forEach(data => {
+    //         //Seperate reading and store in reading array
+    //         reading.push(data.reading);
+
+    //         //Seperate time and store in date array
+    //         date.push(data.time);
+    //     });
+
+    //     console.log("Readings Array :",reading);
+    //     console.log("Date Array :",date);
+        
+    //     response.render("graph",{
+    //         readings : reading,
+    //         date : date
+    //     });
+
+    //     }else{
+    //         response.send(`Given project doesn't exists.. Create one <a href="/addnewproject">Create New Project</a>`);
+    //     }
+    // }else{
+    //     response.send("No data yet !");
+    // }
 
 
 });

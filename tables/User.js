@@ -34,6 +34,23 @@ const userSchema = new schema({
             }
         }
     ],
+    //Idea to be executed
+    // projectData : [
+    //     {
+    //         projectTitle :{
+
+    //         },
+    //         ips : {
+
+    //         },
+    //         pinNumber : {
+
+    //         },
+    //         projectDescription: {
+
+    //         }
+    //     }
+    // ]
     projectTitle :{
         type : Array,
         required :  true
