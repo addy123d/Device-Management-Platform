@@ -10,15 +10,14 @@
 <body>
     <!-- <form action="/projectDetails" method="POST"> -->
     <input type="text" name="title" id="title" placeholder="Project Title" autocomplete="off">
-    <input type="text" name="ip" id="ip" placeholder="Enter Ip" autocomplete="off">
     <input type="number" name="pinNumber" id="number" placeholder="Pins for device configuration" autocomplete="off">
     <textarea name="projDescription" id="description" placeholder="Project Description"></textarea>
     <button id="button">Generate</button>
     <!-- </form> -->
 
-    <textarea id="code">
+    <!-- <textarea id="code">
 
-    </textarea>
+    </textarea> -->
 
     <!-- Response -->
     <div class="response" style="display: none;">
@@ -49,221 +48,371 @@
         titleValue = titleValue.toLowerCase();
 
 
-        if (titleValue.includes("motor")) {
-            code.value = `const { Board, Servo } = require("johnny-five");
-                            const board = new Board();
+        if (titleValue.includes("temperature")) {
 
-                            board.on("ready", () => {
-                            //Pin declarations
-                            const servo = new Servo(${number.value});
+            // Arduino code for nodemcu !
 
+            code.value = ` #include <ESP8266WiFi.h> 
+                           #define pinValue ${number.value}
+                            const char* ssid = "< wifi name >"; //replace with your own wifi ssid 
+                            const char* password = "<password>"; //replace with your own //wifi ssid password 
+                            const char* host = "< your pc ip >";  //How to check PC IP - type ipconfig in cmd
 
-                            const express = require("express");
-                            const fetch = require("node-fetch");
-                            const host = "${ip.value}";
-                            const port = 3000;
+                            // http://127.0.0.1:5000/deviceping/<api_key>&<email>&Sensor
 
+                            void setup() { 
 
-                            var app = express();
-
-                            const readings = [];
-
-                            app.get("/",function(request,response){
-                            response.send("<a href = "/on" > Start Device</a>");
-                            });
-
-                            app.get("/on",function(request,response){
-
-                            //Request platform server
-                            fetch("http://127.0.0.1:5000/deviceping/<api_key>&<email>&${title.value.replace(" ", "")}")
-                            .then(response=>response.json())
-                            .then((result)=>{
-                            console.log(result);
-                            //Blink
-                            if(result.error === 'You are not allowed !' || result.error === "Max calls exceeded !"){
-                            return response.send(result.error);
-                            };
-
-                            //Alright
-                            servo.sweep(); 
-                            return response.json({"message" : "Data sending ...."});
-                            })
-                            .catch(function(err){
-                                console.log(err);
-                                });
+                                    // WIFI Connection Code !  
+                                    Serial.begin(115200); 
+                                    delay(10); // We start by connecting to a WiFi network Serial.println();
+                                    Serial.println(); 
+                                    Serial.print("Connecting to ");
+                                    Serial.println(ssid);
+                                    /* Explicitly set the ESP8266 to be a WiFi-client, otherwise, it by default, would try to act as both a client and an access-point and could cause network-issues with your other WiFi-devices on your WiFi-network. */
+                                    WiFi.mode(WIFI_STA);
+                                    WiFi.begin(ssid, password);
+                                    while (WiFi.status() != WL_CONNECTED)
+                                    {
+                                        delay(500);
+                                        Serial.print(".");
+                                    }
+                                    Serial.println("");
+                                    Serial.println("WiFi connected"); 
+                                    Serial.println("IP address: "); 
+                                    Serial.println(WiFi.localIP()); 
+                                } 
 
 
-                            });
 
-                            app.listen(port,host,function(){
-                            console.log("server is running ......");
-                            })
+                            void loop() { 
+                                
+                                delay(5000); 
+
+                                int value;
+
+                                //Write Sensor Reading Code  
+                                value = analogRead(pinValue);
+                                float mv = ( val/1024.0)*5000;
+                                float celsius = mv/10;
+                                 
+    
+                                Serial.print("connecting to ");
+                                Serial.println(host); // Use WiFiClient class to create TCP connections
 
 
-                            });`;
+                                WiFiClient client;
+                                const int httpPort = 8081;
+
+                                // If Client refuses to connect with server !  
+                                if (!client.connect(host, httpPort)) {
+                                    Serial.println("connection failed");
+                                    return;
+                                }
+
+                                //  float readings = device.reading;
+                                // We now create a URI for the request
+                                //this url contains the informtation we want to send to the server
+                                //if esp8266 only requests the website, the url is empty
+
+                                // URL to be requested !
+                                String url = "/deviceping";
+                                url += "/<api-key>";
+                                url += "&<email>";
+                                url += "&${title.value}";
+  
+  
+                                Serial.print("Requesting URL: ");
+                                Serial.println(url); // This will send the request to the server
+
+                                // GET Request to your platform server !  
+                                client.print(String("GET ") + url + " HTTP/1.1\r\n" + "Host: " + host + "\r\n" + "Connection: close\r\n\r\n");
+
+                                delay(500);
+
+                                // Data URL to be requested !
+                                // Send data to server !
+                                String url2 = "/device/data";
+                                url2 += "/<apiKey>";
+                                url2 += "&${title.value}";
+                                url2 += "&";
+                                url2 += celsius;    //Replace value variable with temperature reading !
+
+                                Serial.print("Requesting URL: ");
+                                Serial.println(url2); // This will send the request to the server
+                                client.print(String("GET ") + url2 + " HTTP/1.1\r\n" + "Host: " + host + "\r\n" + "Connection: close\r\n\r\n");
+
+  
+                                unsigned long timeout = millis();
+
+                                while (client.available() == 0) {
+
+                                // IF no response comes from the server ! i.e request is not fulfilled or processed properly !  
+                                if (millis() - timeout > 5000)
+                                { 
+                                    Serial.println(">>> Client Timeout !");
+                                    client.stop(); 
+                                    return; 
+                                } 
+                                
+                                } // Read all the lines of the reply from server and print them to Serial
+  
+                                while (client.available())
+                                { 
+                                    String line = client.readStringUntil('\r'); Serial.print(line);     
+                                }
+  
+                                Serial.println();
+                                Serial.println("closing connection"); 
+                                }`;
         }
 
-        if (titleValue.includes("led") | titleValue.includes("blink")) {
-            code.value = `const { Board, Led } = require("johnny-five");
-                            const board = new Board();
+        if (titleValue.includes("object detection") || titleValue.includes("ultrasonic")) {
 
-                            board.on("ready", function() {
-                            //Pin configuration
-                            var led = new Led(${number.value});
+            // Arduino code for nodemcu !
 
-                            // Server Configuration
-                            const express = require("express");
-                            const fetch = require("node-fetch");
-                            const host = "${ip.value}";
-                            const port = 3000;
+            code.value = ` #include <ESP8266WiFi.h> 
+                           #define trigPin ${number.value}
+                           #define echoPin 0
+                            const char* ssid = "< wifi name >"; //replace with your own wifi ssid 
+                            const char* password = "<password>"; //replace with your own //wifi ssid password 
+                            const char* host = "< your pc ip >";  //How to check PC IP - type ipconfig in cmd
 
-                            const app = express();
+                            // http://127.0.0.1:5000/deviceping/<api_key>&<email>&Sensor
 
-                            app.get("/",function(request,response){
-                                response.send("<a href = "/on"> Led On</a> 
-                                                <a href = "/off" > Led Off</a>");
-                            })
+                            void setup() { 
 
-                            app.get("/on",function(request,response){
-                           
-                                //Request platform server
-                                fetch("http://127.0.0.1:5000/deviceping/<api_key>&<email>$${title.value.replace(" ", "")}")
-                                .then(response=>response.json())
-                                .then((result)=>{
-                                    console.log(result);
-                                    //Blink
-                                    if(result.error === 'You are not allowed !' || result.error === "Max calls exceeded !"){
-                                        led.stop().off();
-                                        response.send(result.error);
-                                    }else{
-                                        led.blink(1000);
-                                        return response.send("Connected with platform server !");
+                                pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
+                                pinMode(echoPin, INPUT); // Sets the echoPin as an Input
+
+                                    // WIFI Connection Code !  
+                                    Serial.begin(115200); 
+                                    delay(10); // We start by connecting to a WiFi network Serial.println();
+                                    Serial.println(); 
+                                    Serial.print("Connecting to ");
+                                    Serial.println(ssid);
+                                    /* Explicitly set the ESP8266 to be a WiFi-client, otherwise, it by default, would try to act as both a client and an access-point and could cause network-issues with your other WiFi-devices on your WiFi-network. */
+                                    WiFi.mode(WIFI_STA);
+                                    WiFi.begin(ssid, password);
+                                    while (WiFi.status() != WL_CONNECTED)
+                                    {
+                                        delay(500);
+                                        Serial.print(".");
                                     }
-                                })
-                                .catch(err=>console.log(err));
-                                });
-                             
-                              app.get("/off",function(request,response){
-                           
-                                //Request platform server
-                                fetch("http://127.0.0.1:5000/deviceping/<api_key>&<email>${title.value.replace(" ", "")}")
-                                .then(response=>response.json())
-                                .then((result)=>{
-                                    console.log(result);
-                                    //Blink
-                                    if(result.error === 'You are not allowed !' || result.error === "Max calls exceeded !"){
-                                        led.stop().off();
-                                        response.send(result.error);
-                                    }else{
-                                        led.stop().off();
-                                        return response.send("Connected with platform server!");
-                                    }
-                                })
-                                .catch(err=>console.log(err));
-                                });
-
-                            app.listen(port,host,function(){
-                                console.log("Server is running...");
-                            })
+                                    Serial.println("");
+                                    Serial.println("WiFi connected"); 
+                                    Serial.println("IP address: "); 
+                                    Serial.println(WiFi.localIP()); 
+                                } 
 
 
-                            });`;
+
+                            void loop() { 
+                                
+                                delay(5000); 
+
+
+                                //Write Sensor Reading Code  
+                                digitalWrite(trigPin, LOW);
+                                delayMicroseconds(2);
+
+                                // Sets the trigPin on HIGH state for 10 micro seconds
+                                digitalWrite(trigPin, HIGH);
+                                delayMicroseconds(10);
+                                digitalWrite(trigPin, LOW);
+
+                                // Reads the echoPin, returns the sound wave travel time in microseconds
+                                duration = pulseIn(echoPin, HIGH);
+
+                                // Calculating the distance
+                                distance= duration*0.034/2;
+                                // Prints the distance on the Serial Monitor
+                                Serial.print("Distance: ");
+                                Serial.println(distance);
+                                delay(2000);
+                                 
+    
+                                Serial.print("connecting to ");
+                                Serial.println(host); // Use WiFiClient class to create TCP connections
+
+
+                                WiFiClient client;
+                                const int httpPort = 8081;
+
+                                // If Client refuses to connect with server !  
+                                if (!client.connect(host, httpPort)) {
+                                    Serial.println("connection failed");
+                                    return;
+                                }
+
+                                //  float readings = device.reading;
+                                // We now create a URI for the request
+                                //this url contains the informtation we want to send to the server
+                                //if esp8266 only requests the website, the url is empty
+
+                                // URL to be requested !
+                                String url = "/deviceping";
+                                url += "/<api-key>";
+                                url += "&<email>";
+                                url += "&${title.value}";
+  
+  
+                                Serial.print("Requesting URL: ");
+                                Serial.println(url); // This will send the request to the server
+
+                                // GET Request to your platform server !  
+                                client.print(String("GET ") + url + " HTTP/1.1\r\n" + "Host: " + host + "\r\n" + "Connection: close\r\n\r\n");
+
+                                delay(500);
+
+                                // Data URL to be requested !
+                                // Send data to server !
+                                String url2 = "/device/data";
+                                url2 += "/<apiKey>";
+                                url2 += "&${title.value}";
+                                url2 += "&";
+                                url2 += distance;    //Replace value variable with temperature reading !
+
+                                Serial.print("Requesting URL: ");
+                                Serial.println(url2); // This will send the request to the server
+                                client.print(String("GET ") + url2 + " HTTP/1.1\r\n" + "Host: " + host + "\r\n" + "Connection: close\r\n\r\n");
+
+  
+                                unsigned long timeout = millis();
+
+                                while (client.available() == 0) {
+
+                                // IF no response comes from the server ! i.e request is not fulfilled or processed properly !  
+                                if (millis() - timeout > 5000)
+                                { 
+                                    Serial.println(">>> Client Timeout !");
+                                    client.stop(); 
+                                    return; 
+                                } 
+                                
+                                } // Read all the lines of the reply from server and print them to Serial
+  
+                                while (client.available())
+                                { 
+                                    String line = client.readStringUntil('\r'); Serial.print(line);     
+                                }
+  
+                                Serial.println();
+                                Serial.println("closing connection"); 
+                                }`;
         }
+        if (titleValue.includes("demo")) {
 
-        if (titleValue.includes("sensor") || titleValue.includes("ultrasonic sensor") || titleValue.includes("ultrasonic")) {
-            code.value = `const { Board, Proximity, Led } = require("johnny-five");
-                            const board = new Board();
+            // Arduino code for nodemcu !
 
-                            board.on("ready", () => {
-                            //Pin declarations
-                            const proximity = new Proximity({
-                            controller: "HCSR04",
-                            pin: ${number.value}
-                            });
+            code.value = ` #include <ESP8266WiFi.h> 
+                            const char* ssid = "< wifi name >"; //replace with your own wifi ssid 
+                            const char* password = "<password>"; //replace with your own //wifi ssid password 
+                            const char* host = "< your pc ip >";  //How to check PC IP - type ipconfig in cmd
 
-                            const led = new Led(13);
+                            // http://127.0.0.1:5000/deviceping/<api_key>&<email>&Sensor
 
-                            const express = require("express");
-                            const fetch = require("node-fetch");
-                            const host = "${ip.value}";
-                            const port = 3000;
+                            void setup() { 
 
-
-                            var app = express();
-
-                            const readings = [];
-
-                            app.get("/",function(request,response){
-                            response.send("<a href = "/on" > Start Device</a >
-                                            <a href="/checkdata">Check data</a>");
-                            });
-
-                            app.get("/on",function(request,response){
-
-                                //Request platform server
-                                fetch("http://127.0.0.1:5000/deviceping/<api_key>&<email>&${title.value.replace(" ", "")}")
-                                .then(response=>response.json())
-                                .then((result)=>{
-                                console.log(result);
-                                //Blink
-                                if(result.error === 'You are not allowed !' || result.error === "Max calls exceeded !"){
-                                    return response.send(result.error);
-                                };
-
-                                //Alright
-                                proximity.on("change", () => {
-                                    const {centimeters} = proximity;
-                                    console.log("  cm  : ", centimeters);
-
-                                    if(centimeters < 5){
-                                        led.on();
-
-                                        const data = {
-                                            "distance" :"<centimeters> cms",
-                                            "reading" : centimeters,
-                                            "status" : "LED on!",
-                                            "time" : new Date().toString()
-                                        };
-
-                                    readings.push(data);
-
-                                    //Post data using fetch
-
-                                    const options = {
-                                    method : 'post',
-                                    body : JSON.stringify(readings[readings.length-1]),
-                                    headers : {'Content-Type':'application/json'}
-                                    };
-
-                                    fetch('http://127.0.0.1:5000/device/data/<api_key>&${title.value.replace(" ", "")}',options)
-                                    .then(res=>res.json())
-                                    .then((json)=>{
-                                            console.log("Message from server :",json);
-                                    })
-                                    .catch(function(err){
-                                            console.log(err);
-                                    });
-                                    }else{
-                                            led.off();
-                                    };
-
-                                });
-
-                                    return response.json({"message" : "Data sending ...."});
-                                }).
-                                catch(function(err){
-                                    console.log(err);
-                                });
+                                    // WIFI Connection Code !  
+                                    Serial.begin(115200); 
+                                    delay(10); // We start by connecting to a WiFi network Serial.println();
+                                    Serial.println(); 
+                                    Serial.print("Connecting to ");
+                                    Serial.println(ssid);
+                                    /* Explicitly set the ESP8266 to be a WiFi-client, otherwise, it by default, would try to act as both a client and an access-point and could cause network-issues with your other WiFi-devices on your WiFi-network. */
+                                    WiFi.mode(WIFI_STA);
+                                    WiFi.begin(ssid, password);
+                                    while (WiFi.status() != WL_CONNECTED)
+                                    {
+                                        delay(500);
+                                        Serial.print(".");
+                                    }
+                                    Serial.println("");
+                                    Serial.println("WiFi connected"); 
+                                    Serial.println("IP address: "); 
+                                    Serial.println(WiFi.localIP()); 
+                                } 
 
 
-                                });
+                            int value = 0;
 
-                                app.listen(port,host,function(){
-                                    console.log("server is running ......");
-                                })
+                            void loop() { 
+                                
+                                delay(5000); 
 
 
-                                });`;
+                                //Write Sensor Reading Code  
+                                ++value;
+                                 
+    
+                                Serial.print("connecting to ");
+                                Serial.println(host); // Use WiFiClient class to create TCP connections
+
+
+                                WiFiClient client;
+                                const int httpPort = 8081;
+
+                                // If Client refuses to connect with server !  
+                                if (!client.connect(host, httpPort)) {
+                                    Serial.println("connection failed");
+                                    return;
+                                }
+
+                                //  float readings = device.reading;
+                                // We now create a URI for the request
+                                //this url contains the informtation we want to send to the server
+                                //if esp8266 only requests the website, the url is empty
+
+                                // URL to be requested !
+                                String url = "/deviceping";
+                                url += "/<api-key>";
+                                url += "&<email>";
+                                url += "&${title.value}";
+  
+  
+                                Serial.print("Requesting URL: ");
+                                Serial.println(url); // This will send the request to the server
+
+                                // GET Request to your platform server !  
+                                client.print(String("GET ") + url + " HTTP/1.1\r\n" + "Host: " + host + "\r\n" + "Connection: close\r\n\r\n");
+
+                                delay(500);
+
+                                // Data URL to be requested !
+                                // Send data to server !
+                                String url2 = "/device/data";
+                                url2 += "/<apiKey>";
+                                url2 += "&${title.value}";
+                                url2 += "&";
+                                url2 += value;    //Replace value variable with temperature reading !
+
+                                Serial.print("Requesting URL: ");
+                                Serial.println(url2); // This will send the request to the server
+                                client.print(String("GET ") + url2 + " HTTP/1.1\r\n" + "Host: " + host + "\r\n" + "Connection: close\r\n\r\n");
+
+  
+                                unsigned long timeout = millis();
+
+                                while (client.available() == 0) {
+
+                                // IF no response comes from the server ! i.e request is not fulfilled or processed properly !  
+                                if (millis() - timeout > 5000)
+                                { 
+                                    Serial.println(">>> Client Timeout !");
+                                    client.stop(); 
+                                    return; 
+                                } 
+                                
+                                } // Read all the lines of the reply from server and print them to Serial
+  
+                                while (client.available())
+                                { 
+                                    String line = client.readStringUntil('\r'); Serial.print(line);     
+                                }
+  
+                                Serial.println();
+                                Serial.println("closing connection"); 
+                                }`;
         }
 
         const options = {
