@@ -6,8 +6,8 @@ const urlObj = require("./setup/config");
 const User = require("./tables/User");
 const Data  = require("./tables/Data");
 const ejs = require("ejs");
-const host = "127.0.0.1";
-const port = 5000;
+// const host = "127.0.0.1";
+// const port = 5000;
 var hour = 3600000;
 
 // Initialisation
@@ -18,7 +18,7 @@ app.use(express.json());
 app.use(express.urlencoded({extended : false}));
 
 //Configuration
- // SESSION CONFIGURATION (for initialising of token, and many more properties !)
+// SESSION CONFIGURATION (for initialising of token, and many more properties !)
  const sess = {
     name: "User",
     resave: false,
@@ -98,7 +98,7 @@ function validateKey(request,response,next){
            
             //Check user's plan
             if(person.plan === "Free"){
-                API_COUNT = 2;
+                API_COUNT = 18;
             }else{
                 if(person.plan === "Silver"){
                     API_COUNT = 5;  
@@ -108,6 +108,7 @@ function validateKey(request,response,next){
             };
 
             if(person.usage[usageIndex].count > API_COUNT){
+                console.log("Max Calls exceeded !");
                 response.json({
                     "error" : "Max calls exceeded !"
                 });
@@ -179,7 +180,6 @@ function validateKey(request,response,next){
             // });
 
         }
-   
 
         }else{
         response.json({
@@ -273,7 +273,7 @@ app.post("/registerDetails",function(request,response){
         if(person){
             response.json({
                 "emailerr" : "Already Registered !"
-            })
+            });
         }else{
             //For free plan usage check
             var plan_usage;
@@ -644,7 +644,6 @@ app.post("/projectDetails",function(request,response){
                 //Idea to be executed
                 projectData : {
                         projectTitle : title,
-                        ips : ip,
                         pinNumber : pinNumber,
                         projectDescription : description
                 }
@@ -692,6 +691,7 @@ app.post("/projectDetails",function(request,response){
 });
 
 
+// User API Section
 app.get("/deviceping/:key&:email&:title",validateKey,function(request,response){
     console.log("Device is connected with me !");
 
@@ -815,7 +815,7 @@ app.get("/deviceping/:key&:email&:title",validateKey,function(request,response){
 
 
 //Collect User data !
-app.post("/device/data/:api_key&:title",function(request,response){
+app.get("/device/data/:api_key&:title&:reading",function(request,response){
     // console.log(request.body);
 
     //Collect properties (Normal way)
@@ -825,18 +825,18 @@ app.post("/device/data/:api_key&:title",function(request,response){
     // const time = request.body.time;
 
     // Alternative way to collect properties
-    const { distance, reading, status, time} = request.body;
+    // const { reading, time} = request.body;
+    const time = new Date().toString();
     const key = request.params.api_key;
     const projectTitle = request.params.title;
+    const reading = request.params.reading;
 
     Data.findOne({key : key})
     .then(function(person){
             console.log(person);
 
             const device_data = {
-                distance : distance,
                 reading : reading,
-                status : status,
                 time : time
             };
 
@@ -992,6 +992,7 @@ app.get("/logout",function(request,response){
     })
 });
 
-app.listen(port,host,function(){
-    console.log("Server is running !");
+var server = app.listen(8081,function(){
+    var host = server.address().address;
+    console.log(`Server is running at address ${host} and port 8081 !`);
 });

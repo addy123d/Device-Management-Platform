@@ -1,0 +1,109 @@
+#include <ESP8266WiFi.h> 
+                            const char* ssid = "< wifi name >"; //replace with your own wifi ssid 
+                            const char* password = "<password>"; //replace with your own //wifi ssid password 
+                            const char* host = "< your pc ip >";  //How to check PC IP - type ipconfig in cmd
+
+                            // http://127.0.0.1:5000/deviceping/<api_key>&<email>&Sensor
+
+                            void setup() { 
+
+                                    // WIFI Connection Code !  
+                                    Serial.begin(115200); 
+                                    delay(10); // We start by connecting to a WiFi network Serial.println();
+                                    Serial.println(); 
+                                    Serial.print("Connecting to ");
+                                    Serial.println(ssid);
+                                    /* Explicitly set the ESP8266 to be a WiFi-client, otherwise, it by default, would try to act as both a client and an access-point and could cause network-issues with your other WiFi-devices on your WiFi-network. */
+                                    WiFi.mode(WIFI_STA);
+                                    WiFi.begin(ssid, password);
+                                    while (WiFi.status() != WL_CONNECTED)
+                                    {
+                                        delay(500);
+                                        Serial.print(".");
+                                    }
+                                    Serial.println("");
+                                    Serial.println("WiFi connected"); 
+                                    Serial.println("IP address: "); 
+                                    Serial.println(WiFi.localIP()); 
+                                } 
+
+
+                            int value = 0;
+
+                            void loop() { 
+                                
+                                delay(5000); 
+
+
+                                //Write Sensor Reading Code  
+                                ++value;
+                                 
+    
+                                Serial.print("connecting to ");
+                                Serial.println(host); // Use WiFiClient class to create TCP connections
+
+
+                                WiFiClient client;
+                                const int httpPort = 8081;
+
+                                // If Client refuses to connect with server !  
+                                if (!client.connect(host, httpPort)) {
+                                    Serial.println("connection failed");
+                                    return;
+                                }
+
+                                //  float readings = device.reading;
+                                // We now create a URI for the request
+                                //this url contains the informtation we want to send to the server
+                                //if esp8266 only requests the website, the url is empty
+
+                                // URL to be requested !
+                                String url = "/deviceping";
+                                url += "/<api-key>";
+                                url += "&<email>";
+                                url += "&${title.value}";
+  
+  
+                                Serial.print("Requesting URL: ");
+                                Serial.println(url); // This will send the request to the server
+
+                                // GET Request to your platform server !  
+                                client.print(String("GET ") + url + " HTTP/1.1\r\n" + "Host: " + host + "\r\n" + "Connection: close\r\n\r\n");
+
+                                delay(500);
+
+                                // Data URL to be requested !
+                                // Send data to server !
+                                String url2 = "/device/data";
+                                url2 += "/<apiKey>";
+                                url2 += "&${title.value}";
+                                url2 += "&";
+                                url2 += value;    //Replace value variable with temperature reading !
+
+                                Serial.print("Requesting URL: ");
+                                Serial.println(url2); // This will send the request to the server
+                                client.print(String("GET ") + url2 + " HTTP/1.1\r\n" + "Host: " + host + "\r\n" + "Connection: close\r\n\r\n");
+
+  
+                                unsigned long timeout = millis();
+
+                                while (client.available() == 0) {
+
+                                // IF no response comes from the server ! i.e request is not fulfilled or processed properly !  
+                                if (millis() - timeout > 5000)
+                                { 
+                                    Serial.println(">>> Client Timeout !");
+                                    client.stop(); 
+                                    return; 
+                                } 
+                                
+                                } // Read all the lines of the reply from server and print them to Serial
+  
+                                while (client.available())
+                                { 
+                                    String line = client.readStringUntil('\r'); Serial.print(line);     
+                                }
+  
+                                Serial.println();
+                                Serial.println("closing connection"); 
+                                }
