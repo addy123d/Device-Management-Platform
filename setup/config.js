@@ -1,5 +1,5 @@
 const url = {
-    url : "mongodb+srv://RAJBHOGE:7EITqvi0IgTkqqGM@platform.2hrik.mongodb.net/DEVICEMANAGEMENTPLATFORM?retryWrites=true&w=majority",
+    url : "mongodb+srv://:@platform.2hrik.mongodb.net/DEVICEMANAGEMENTPLATFORM?retryWrites=true&w=majority",
     key : 'mysecret'
 };
 
